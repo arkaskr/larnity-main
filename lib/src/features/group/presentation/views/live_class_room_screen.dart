@@ -16,19 +16,37 @@ class LiveClassRoomScreen extends StatelessWidget {
   const LiveClassRoomScreen({Key? key}) : super(key: key);
 
   _AppointmentDataSource _getCalendarDataSource() {
-    List<Appointment> appointments = <Appointment>[];
-    appointments.add(
+    final List<Appointment> appointments = <Appointment>[
       Appointment(
         startTime: DateTime.now(),
-        endTime: DateTime.now().add(Duration(minutes: 10)),
+        endTime: DateTime.now().add(const Duration(minutes: 10)),
         subject: 'Meeting',
         color: Colors.blue,
-        // startTimeZone: '',
-        // endTimeZone: '',
       ),
-    );
+    ];
 
     return _AppointmentDataSource(appointments);
+  }
+
+  /// 🔹 Common dialog wrapper (reuse)
+  Widget _buildSizedDialog(
+    BuildContext context, {
+    required Widget child,
+    double heightFactor = 0.65,
+  }) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+      backgroundColor: AppColors.bgBlue,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSizes.xxxs),
+      ),
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.95,
+        height: MediaQuery.of(context).size.height * 0.65,
+
+        child: child,
+      ),
+    );
   }
 
   @override
@@ -37,10 +55,11 @@ class LiveClassRoomScreen extends StatelessWidget {
       child: Column(
         children: [
           AppSizes.xs.ph,
-          Container(
+          SizedBox(
             height: 1.sh,
             child: Column(
               children: [
+                /// HEADER
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -50,14 +69,16 @@ class LiveClassRoomScreen extends StatelessWidget {
                       style: AppTextStyles.headline2(color: AppColors.white),
                     ),
 
+                    /// ADD CLASS BUTTON
                     AppButton(
                       isExpanded: false,
                       onPressed: () {
                         showDialog(
                           context: context,
-                          builder: (context) => Dialog(
-                            backgroundColor: AppColors.bgBlue,
-                            child: AddClass(),
+                          builder: (_) => _buildSizedDialog(
+                            context,
+                            child: const AddClass(),
+                            heightFactor: 0.65,
                           ),
                         );
                       },
@@ -74,21 +95,27 @@ class LiveClassRoomScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+
                 AppSizes.xs.ph,
+
+                /// CALENDAR
                 SizedBox(
                   height: 0.9.sh,
                   child: SfCalendar(
                     dataSource: _getCalendarDataSource(),
                     allowDragAndDrop: true,
                     view: CalendarView.month,
+
+                    /// APPOINTMENT TILE
                     appointmentBuilder: (context, calendarAppointmentDetails) {
                       return GestureDetector(
                         onTap: () {
                           showDialog(
                             context: context,
-                            builder: (context) => Dialog(
-                              backgroundColor: AppColors.bgBlue,
-                              child: ViewEvent(),
+                            builder: (_) => _buildSizedDialog(
+                              context,
+                              child: const ViewEvent(),
+                              heightFactor: 0.6,
                             ),
                           );
                         },
@@ -102,13 +129,13 @@ class LiveClassRoomScreen extends StatelessWidget {
                               Container(
                                 height: 20,
                                 width: 20,
-                                decoration: BoxDecoration(
+                                decoration: const BoxDecoration(
                                   color: AppColors.primaryOrange,
                                   shape: BoxShape.circle,
                                 ),
                               ),
                               AppSizes.xxxs.pw,
-                              Expanded(
+                              const Expanded(
                                 child: Text(
                                   "demo",
                                   overflow: TextOverflow.fade,
@@ -121,15 +148,18 @@ class LiveClassRoomScreen extends StatelessWidget {
                       );
                     },
 
+                    /// EMPTY DATE TAP
                     onTap: (calendarTapDetails) {
                       showDialog(
                         context: context,
-                        builder: (context) => Dialog(
-                          backgroundColor: AppColors.bgBlue,
-                          child: AddClass(),
+                        builder: (_) => _buildSizedDialog(
+                          context,
+                          child: const AddClass(),
+                          heightFactor: 0.65,
                         ),
                       );
                     },
+
                     monthViewSettings: const MonthViewSettings(
                       appointmentDisplayMode:
                           MonthAppointmentDisplayMode.appointment,
@@ -137,7 +167,7 @@ class LiveClassRoomScreen extends StatelessWidget {
                     timeSlotViewSettings: const TimeSlotViewSettings(
                       minimumAppointmentDuration: Duration(minutes: 60),
                     ),
-                    scheduleViewSettings: ScheduleViewSettings(
+                    scheduleViewSettings: const ScheduleViewSettings(
                       appointmentItemHeight: 20,
                     ),
                   ),

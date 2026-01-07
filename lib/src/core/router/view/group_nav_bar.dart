@@ -15,13 +15,14 @@ import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
 import 'package:larnity/src/core/ui/widgets/app_dropdown.dart';
+import 'package:larnity/src/core/ui/widgets/smart_image.dart';
 import 'package:larnity/src/features/auth/presentation/provider/auth_provider.dart';
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/data/models/group_model.dart';
 
 class GroupNavBar extends ConsumerWidget {
   GroupNavBar({Key? key, required this.navigationShell})
-      : super(key: key ?? const ValueKey('ScaffoldWithNestedNavigation'));
+    : super(key: key ?? const ValueKey('ScaffoldWithNestedNavigation'));
 
   final StatefulNavigationShell navigationShell;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
@@ -38,7 +39,7 @@ class GroupNavBar extends ConsumerWidget {
     // Watch the group provider to get the list of groups
     final groupState = ref.watch(groupProvider);
     final groups = groupState.groups ?? [];
-    
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -127,30 +128,27 @@ class GroupNavBar extends ConsumerWidget {
                       behavior: HitTestBehavior.opaque,
                       onTap: () {
                         // Set the selected group and navigate to the group screen
-                        ref.read(groupProvider.notifier).setSelectedGroup(group);
+                        ref
+                            .read(groupProvider.notifier)
+                            .setSelectedGroup(group);
                         context.pushNamed(Routes.group);
                       },
                       child: Row(
                         children: [
                           // Show group icon if available, otherwise use a default icon
-                          group.icon != null 
-                            ? Image.network(
-                                group.icon!,
-                                width: 20,
-                                height: 20,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) => 
-                                  HugeIcon(
-                                    icon: HugeIconsStrokeRounded.user,
-                                    color: AppColors.white,
-                                    size: 20,
-                                  ),
-                              )
-                            : HugeIcon(
-                                icon: HugeIconsStrokeRounded.user,
-                                color: AppColors.white,
-                                size: 20,
-                              ),
+                          group.icon != null
+                              ? SmartImage(
+                                  group.icon,
+                                  width: 20,
+                                  height: 20,
+                                  fit: BoxFit.contain,
+                                )
+                              : HugeIcon(
+                                  icon: HugeIconsStrokeRounded.user,
+                                  color: AppColors.white,
+                                  size: 20,
+                                ),
+
                           8.pw,
                           // Show group name
                           Text(group.name),
@@ -164,6 +162,7 @@ class GroupNavBar extends ConsumerWidget {
               AppButton(
                 onPressed: () {},
                 padding: EdgeInsets.zero,
+                bgColor: Colors.transparent,
                 child: Row(
                   children: [
                     Text(
@@ -174,7 +173,6 @@ class GroupNavBar extends ConsumerWidget {
                     Icon(Icons.add, color: AppColors.white),
                   ],
                 ),
-                bgColor: Colors.transparent,
               ),
               AppSizes.lg.ph,
 
@@ -352,7 +350,16 @@ class GroupNavBar extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _BuildNavItem(
-              onTap: () => _goBranch(0),
+              onTap: () {
+                // Get current group
+                final currentGroup = ref.read(groupProvider).group;
+
+                if (currentGroup?.id != null) {
+                  // Navigate to group home and reset to discussion room (index 0)
+                  ref.read(groupProvider.notifier).setSelectedTab(0);
+                  context.go('/group/${currentGroup!.id}');
+                }
+              },
               icon: HugeIcon(
                 icon: HugeIconsStrokeRounded.home03,
                 color: Colors.grey,
@@ -437,12 +444,12 @@ class GroupNavBar extends ConsumerWidget {
               isSelected: navigationShell.currentIndex == 1,
             ),
             _BuildNavItem(
-              onTap: () => _goBranch(2),
+              onTap: () => _goBranch(1),
               icon: HugeIcon(
                 icon: HugeIconsStrokeRounded.message02,
                 color: Colors.grey,
               ),
-              isSelected: navigationShell.currentIndex == 2,
+              isSelected: navigationShell.currentIndex == 1,
             ),
             _BuildNavItem(
               onTap: () {},

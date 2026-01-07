@@ -12,6 +12,9 @@ import 'package:go_router/go_router.dart';
 import 'package:larnity/src/core/router/router.dart';
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/data/models/group_model.dart';
+import 'dart:io';
+
+import 'package:share_plus/share_plus.dart';
 
 class GroupDetailsScreen extends ConsumerWidget {
   const GroupDetailsScreen({Key? key}) : super(key: key);
@@ -24,9 +27,7 @@ class GroupDetailsScreen extends ConsumerWidget {
     // If no group is selected, show loading or error state
     if (selectedGroup == null) {
       if (groupState.isLoading) {
-        return Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        );
+        return Scaffold(body: Center(child: CircularProgressIndicator()));
       } else if (groupState.isFailure) {
         return Scaffold(
           body: Center(
@@ -38,7 +39,9 @@ class GroupDetailsScreen extends ConsumerWidget {
                 AppButton(
                   onPressed: () {
                     // Try to reload the group
-                    ref.read(groupProvider.notifier).refreshGroupsForCurrentUser();
+                    ref
+                        .read(groupProvider.notifier)
+                        .refreshGroupsForCurrentUser();
                   },
                   label: "Retry",
                   labelStyle: AppTextStyles.bodyText2(),
@@ -50,9 +53,7 @@ class GroupDetailsScreen extends ConsumerWidget {
           ),
         );
       } else {
-        return Scaffold(
-          body: Center(child: Text('No group selected')),
-        );
+        return Scaffold(body: Center(child: Text('No group selected')));
       }
     }
 
@@ -81,12 +82,7 @@ class GroupDetailsScreen extends ConsumerWidget {
                   color: AppColors.primaryOrange,
                   borderRadius: BorderRadius.circular(AppSizes.xxxs),
                 ),
-                child: selectedGroup.thumbnail != null
-                    ? Image.network(
-                        selectedGroup.thumbnail!,
-                        fit: BoxFit.cover,
-                      )
-                    : null,
+                child: smartImage(selectedGroup.thumbnail, fit: BoxFit.cover),
               ),
               AppSizes.lg.ph,
               Text(
@@ -114,12 +110,10 @@ class GroupDetailsScreen extends ConsumerWidget {
                             color: AppColors.primaryOrange,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: selectedGroup.icon != null
-                              ? Image.network(
-                                  selectedGroup.icon!,
-                                  fit: BoxFit.contain,
-                                )
-                              : null,
+                          child: smartImage(
+                            selectedGroup.icon,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                         AppSizes.xs.pw,
                         Expanded(
@@ -229,12 +223,24 @@ class GroupDetailsScreen extends ConsumerWidget {
                           AppButton(
                             height: 40,
                             isExpanded: false,
-                            onPressed: () {
-                              // Share functionality
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Share functionality would go here'),
-                                ),
+                            onPressed: () async {
+                              final shareUrl = selectedGroup.slug != null
+                                  ? "https://www.larnity.com/group/${selectedGroup.slug}"
+                                  : "https://www.larnity.com";
+
+                              final shareText =
+                                  '''
+Check out ${selectedGroup.name} on Larnity!
+
+${selectedGroup.description ?? 'Join this amazing community'}
+
+Join here: $shareUrl
+''';
+
+                              await Share.share(
+                                shareText,
+                                subject:
+                                    'Join ${selectedGroup.name} on Larnity',
                               );
                             },
                             label: "Share",
@@ -249,10 +255,7 @@ class GroupDetailsScreen extends ConsumerWidget {
                       ),
                     ),
                     AppSizes.xxlg.ph,
-                    Text(
-                      selectedGroup.name,
-                      style: AppTextStyles.headline5(),
-                    ),
+                    Text(selectedGroup.name, style: AppTextStyles.headline5()),
                     if (selectedGroup.description != null)
                       Text(
                         selectedGroup.description!,
@@ -281,7 +284,12 @@ void _showPlanSelectionSheet(BuildContext context) {
     ),
     builder: (ctx) {
       return Padding(
-        padding: EdgeInsets.fromLTRB(AppSizes.xs, AppSizes.sm, AppSizes.xs, AppSizes.sm),
+        padding: EdgeInsets.fromLTRB(
+          AppSizes.xs,
+          AppSizes.sm,
+          AppSizes.xs,
+          AppSizes.sm,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,10 +297,7 @@ void _showPlanSelectionSheet(BuildContext context) {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Choose a plan',
-                  style: AppTextStyles.headline4(),
-                ),
+                Text('Choose a plan', style: AppTextStyles.headline4()),
                 IconButton(
                   icon: const Icon(Icons.close),
                   color: AppColors.creamWhite,
@@ -309,7 +314,11 @@ void _showPlanSelectionSheet(BuildContext context) {
             InkWell(
               onTap: () {
                 Navigator.of(ctx).pop();
-                _showPaymentSheet(context, planName: 'Lifetime', amountINR: 999);
+                _showPaymentSheet(
+                  context,
+                  planName: 'Lifetime',
+                  amountINR: 999,
+                );
               },
               child: Container(
                 width: double.infinity,
@@ -342,7 +351,11 @@ void _showPlanSelectionSheet(BuildContext context) {
   );
 }
 
-void _showPaymentSheet(BuildContext context, {required String planName, required int amountINR}) {
+void _showPaymentSheet(
+  BuildContext context, {
+  required String planName,
+  required int amountINR,
+}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -355,7 +368,12 @@ void _showPaymentSheet(BuildContext context, {required String planName, required
         builder: (ctx, setState) {
           String method = 'Paymintro';
           return Padding(
-            padding: EdgeInsets.fromLTRB(AppSizes.xs, AppSizes.sm, AppSizes.xs, AppSizes.sm),
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.xs,
+              AppSizes.sm,
+              AppSizes.xs,
+              AppSizes.sm,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,7 +403,10 @@ void _showPaymentSheet(BuildContext context, {required String planName, required
                     children: [
                       Text('$planName Plan', style: AppTextStyles.headline5()),
                       AppSizes.xxxs.ph,
-                      Text('₹$amountINR for $planName', style: AppTextStyles.bodyText2()),
+                      Text(
+                        '₹$amountINR for $planName',
+                        style: AppTextStyles.bodyText2(),
+                      ),
                     ],
                   ),
                 ),
@@ -400,11 +421,15 @@ void _showPaymentSheet(BuildContext context, {required String planName, required
                           fillColor: AppColors.black,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(AppSizes.xxxs),
-                            borderSide: BorderSide(color: AppColors.borderBrown),
+                            borderSide: BorderSide(
+                              color: AppColors.borderBrown,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(AppSizes.xxxs),
-                            borderSide: BorderSide(color: AppColors.borderBrown),
+                            borderSide: BorderSide(
+                              color: AppColors.borderBrown,
+                            ),
                           ),
                         ),
                         style: AppTextStyles.bodyText2(),
@@ -416,7 +441,9 @@ void _showPaymentSheet(BuildContext context, {required String planName, required
                       height: 48,
                       onPressed: () {},
                       label: 'Apply',
-                      labelStyle: AppTextStyles.bodyText2(color: AppColors.white),
+                      labelStyle: AppTextStyles.bodyText2(
+                        color: AppColors.white,
+                      ),
                       bgColor: AppColors.black,
                       borderColor: AppColors.white,
                       radius: AppSizes.xxxs,
@@ -433,8 +460,12 @@ void _showPaymentSheet(BuildContext context, {required String planName, required
                           setState(() => method = 'Paymintro');
                         },
                         label: 'Paymintro',
-                        labelStyle: AppTextStyles.bodyText2(color: AppColors.white),
-                        bgColor: method == 'Paymintro' ? AppColors.purple : AppColors.black,
+                        labelStyle: AppTextStyles.bodyText2(
+                          color: AppColors.white,
+                        ),
+                        bgColor: method == 'Paymintro'
+                            ? AppColors.purple
+                            : AppColors.black,
                         borderColor: AppColors.white,
                         radius: AppSizes.xxxs,
                       ),
@@ -447,8 +478,12 @@ void _showPaymentSheet(BuildContext context, {required String planName, required
                           setState(() => method = 'Cashfree');
                         },
                         label: 'Cashfree',
-                        labelStyle: AppTextStyles.bodyText2(color: AppColors.white),
-                        bgColor: method == 'Cashfree' ? AppColors.purple : AppColors.black,
+                        labelStyle: AppTextStyles.bodyText2(
+                          color: AppColors.white,
+                        ),
+                        bgColor: method == 'Cashfree'
+                            ? AppColors.purple
+                            : AppColors.black,
                         borderColor: AppColors.white,
                         radius: AppSizes.xxxs,
                       ),
@@ -460,14 +495,21 @@ void _showPaymentSheet(BuildContext context, {required String planName, required
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Total Amount:', style: AppTextStyles.bodyText2()),
-                    Text('₹${amountINR.toStringAsFixed(0)}', style: AppTextStyles.headline5()),
+                    Text(
+                      '₹${amountINR.toStringAsFixed(0)}',
+                      style: AppTextStyles.headline5(),
+                    ),
                   ],
                 ),
                 AppSizes.xs.ph,
                 AppButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Redirecting to $method secure payment...')),
+                      SnackBar(
+                        content: Text(
+                          'Redirecting to $method secure payment...',
+                        ),
+                      ),
                     );
                   },
                   label: 'Pay Securely with $method',
@@ -488,5 +530,38 @@ void _showPaymentSheet(BuildContext context, {required String planName, required
         },
       );
     },
+  );
+}
+
+Widget smartImage(
+  String? path, {
+  BoxFit fit = BoxFit.cover,
+  double? width,
+  double? height,
+}) {
+  if (path == null || path.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  // If it's a network URL
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return Image.network(
+      path,
+      fit: fit,
+      width: width,
+      height: height,
+      errorBuilder: (_, __, ___) =>
+          const Icon(Icons.broken_image, color: Colors.grey),
+    );
+  }
+
+  // Otherwise treat it as a local file
+  return Image.file(
+    File(path),
+    fit: fit,
+    width: width,
+    height: height,
+    errorBuilder: (_, __, ___) =>
+        const Icon(Icons.broken_image, color: Colors.grey),
   );
 }

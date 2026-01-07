@@ -405,21 +405,41 @@ class PackageSubscriptionScreen extends ConsumerWidget {
                                   AsyncState.success &&
                               groupState.groups != null &&
                               groupState.groups!.isNotEmpty) {
+                            final userGroups = groupState.groups!
+                                .where((group) => group.userId == userId)
+                                .toList();
+
+                            if (userGroups.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  "You haven't created any groups yet",
+                                ),
+                              );
+                            }
                             return ListView.separated(
                               shrinkWrap: true,
                               physics: NeverScrollableScrollPhysics(),
                               itemBuilder: (context, index) {
-                                final group = groupState.groups![index];
+                                final group =
+                                    userGroups[index]; // ✅ Use filtered list
                                 Log.info("Group: ${group.toMap()}");
                                 return AppButton(
                                   isExpanded: false,
+                                  // onPressed: () {
+                                  //   // Navigate to the group screen
+                                  //   context.pushNamed(Routes.group);
+                                  // },
                                   onPressed: () {
-                                    // Navigate to the group screen
-                                    context.pushNamed(Routes.group);
+                                    if (group.id != null) {
+                                      context.go(
+                                        '/group/${group.id}',
+                                      ); // ✅ push ki jagah go use karo
+                                    }
                                   },
                                   bgColor: Colors.transparent,
-                                  borderColor: AppColors.skyBlue
-                                      .withValues(alpha: 0.5),
+                                  borderColor: AppColors.skyBlue.withValues(
+                                    alpha: 0.5,
+                                  ),
                                   radius: AppSizes.xxxs,
                                   child: Row(
                                     mainAxisAlignment:
@@ -433,24 +453,16 @@ class PackageSubscriptionScreen extends ConsumerWidget {
                                               width: 24,
                                               decoration: BoxDecoration(
                                                 color: AppColors.white
-                                                    .withValues(
-                                                      alpha: 0.1,
-                                                    ),
+                                                    .withValues(alpha: 0.1),
                                                 borderRadius:
-                                                    BorderRadius.circular(
-                                                      4,
-                                                    ),
+                                                    BorderRadius.circular(4),
                                               ),
                                               child: Center(
                                                 child: Text(
-                                                  group.name.substring(
-                                                    0,
-                                                    2,
-                                                  ),
+                                                  group.name.substring(0, 2),
                                                   style:
                                                       AppTextStyles.bodyText2(
-                                                        color: AppColors
-                                                            .white
+                                                        color: AppColors.white
                                                             .withValues(
                                                               alpha: 0.8,
                                                             ),
@@ -462,13 +474,10 @@ class PackageSubscriptionScreen extends ConsumerWidget {
                                             Expanded(
                                               child: Text(
                                                 group.name,
-                                                style:
-                                                    AppTextStyles.bodyText2(
-                                                  color:
-                                                      AppColors.white,
+                                                style: AppTextStyles.bodyText2(
+                                                  color: AppColors.white,
                                                 ),
-                                                overflow:
-                                                    TextOverflow.ellipsis,
+                                                overflow: TextOverflow.ellipsis,
                                                 maxLines: 1,
                                               ),
                                             ),
@@ -486,7 +495,7 @@ class PackageSubscriptionScreen extends ConsumerWidget {
                                 );
                               },
                               separatorBuilder: (_, __) => AppSizes.xs.ph,
-                              itemCount: groupState.groups!.length,
+                              itemCount: userGroups.length,
                             );
                           } else {
                             return Center(

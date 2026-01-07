@@ -4,6 +4,7 @@ import 'package:larnity/src/core/error/failures.dart';
 import 'package:larnity/src/core/service/supabase/src/supabase_provider.dart';
 import 'package:larnity/src/core/utils/logger.dart';
 import 'package:larnity/src/features/group/data/models/group_model.dart';
+import 'package:larnity/src/features/group/data/models/message_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final groupDataSourceProvider = Provider<GroupDataSource>((ref) {
@@ -124,21 +125,33 @@ class GroupDataSource {
     required GroupModel group,
   }) async {
     try {
+      final updateData = group.toMap();
+      updateData.remove('id');
+      updateData.remove('created_at');
+
+      Log.info("🔍 Updating group with ID: ${group.id}");
+      Log.info("🔍 Update data: $updateData");
+
+      // ✅ Pehle update karo WITHOUT select
+      await supabaseClient
+          .from('Group')
+          .update(updateData)
+          .eq('id', group.id ?? "");
+
+      // ✅ Fir separately fetch karo
       final response = await supabaseClient
           .from('Group')
-          .update(group.toMap())
-          .eq('id', group.id ?? "")
           .select()
+          .eq('id', group.id ?? "")
           .single();
 
-      Log.info("Update Group Response: ${response.toString()}");
-
+      Log.info("✅ Update Group Response: ${response.toString()}");
       return Right(GroupModel.fromMap(response));
     } on PostgrestException catch (e) {
-      Log.error("Update Group Error: ${e.message}");
+      Log.error("❌ Update Group Error: ${e.message}");
       return Left(Failure(e.message));
     } catch (e) {
-      Log.error("Update Group Error: ${e.toString()}");
+      Log.error("❌ Update Group Error: ${e.toString()}");
       return Left(Failure(e.toString()));
     }
   }
@@ -212,6 +225,87 @@ class GroupDataSource {
       return Left(Failure(e.message));
     } catch (e) {
       Log.error("Get Group by Slug Error: ${e.toString()}");
+      return Left(Failure(e.toString()));
+    }
+  }
+
+  // Join group as member
+  Future<Either<Failure, void>> joinGroup({
+    required String userId,
+    required String groupId,
+  }) async {
+    try {
+      // Check if already a member
+      final existingMember = await supabaseClient
+          .from('Members')
+          .select()
+          .eq('userId', userId)
+          .eq('groupId', groupId)
+          .maybeSingle();
+
+      if (existingMember != null) {
+        return Left(Failure("Already a member of this group"));
+      }
+
+      // Add user as member (with subscription details if needed)
+      await supabaseClient.from('Members').insert({
+        'userId': userId,
+        'groupId': groupId,
+        'role': 'MEMBER',
+        'isActive': true,
+        'planType': 'LIFETIME', // Or get from payment
+        'subscriptionStartDate': DateTime.now().toIso8601String(),
+      });
+
+      Log.info("✅ User $userId joined group $groupId");
+      return const Right(null);
+    } on PostgrestException catch (e) {
+      Log.error("❌ Join Group Error: ${e.message}");
+      return Left(Failure(e.message));
+    } catch (e) {
+      Log.error("❌ Join Group Error: ${e.toString()}");
+      return Left(Failure(e.toString()));
+    }
+  }
+
+  // Check if user is already a member
+  Future<Either<Failure, bool>> isMember({
+    required String userId,
+    required String groupId,
+  }) async {
+    try {
+      final response = await supabaseClient
+          .from('Members')
+          .select()
+          .eq('userId', userId)
+          .eq('groupId', groupId)
+          .maybeSingle();
+
+      return Right(response != null);
+    } on PostgrestException catch (e) {
+      Log.error("❌ Check Member Error: ${e.message}");
+      return Left(Failure(e.message));
+    } catch (e) {
+      Log.error("❌ Check Member Error: ${e.toString()}");
+      return Left(Failure(e.toString()));
+    }
+  }
+
+  Future<Either<Failure, List<MemberModel>>> getGroupMembers({
+    required String groupId,
+  }) async {
+    try {
+      final response = await supabaseClient
+          .from('Members')
+          .select('*, Users(name, email, avatar)')
+          .eq('groupId', groupId)
+          .eq('isActive', true);
+
+      final members = response
+          .map((data) => MemberModel.fromMap(data))
+          .toList();
+      return Right(members);
+    } catch (e) {
       return Left(Failure(e.toString()));
     }
   }

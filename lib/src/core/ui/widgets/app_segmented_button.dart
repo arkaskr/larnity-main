@@ -49,6 +49,7 @@ class _AppSegmentedButtonState extends State<AppSegmentedButton> {
     _buttonKeys.addAll(
       List.generate(widget.buttonItems.length, (_) => GlobalKey()),
     );
+    widget.pageController.addListener(_onPageChanged);
   }
 
   void _scrollToSelected(int index) {
@@ -60,6 +61,19 @@ class _AppSegmentedButtonState extends State<AppSegmentedButton> {
         curve: Curves.easeInOut,
         alignment: 0.5,
       );
+    }
+  }
+
+  void _onPageChanged() {
+    final page = widget.pageController.page?.round();
+    if (page != null && page != selectedSegmentIndex) {
+      setState(() {
+        selectedSegmentIndex = page;
+      });
+
+      if (widget.isScrollable) {
+        _scrollToSelected(page);
+      }
     }
   }
 
@@ -145,7 +159,8 @@ class _AppSegmentedButtonState extends State<AppSegmentedButton> {
                         children: [
                           if (item.prefixIcon != null && isSelected) ...[
                             HugeIcon(
-                              icon: HugeIconsStrokeRounded.abacus,       size: 16,
+                              icon: HugeIconsStrokeRounded.abacus,
+                              size: 16,
                               color: isSelected
                                   ? (widget.selectedLabelStyle?.color ??
                                         AppColors.darkBg)
@@ -179,7 +194,8 @@ class _AppSegmentedButtonState extends State<AppSegmentedButton> {
                           if (item.suffixIcon != null) ...[
                             5.pw,
                             HugeIcon(
-                              icon: HugeIconsStrokeRounded.abacus,       size: 16,
+                              icon: HugeIconsStrokeRounded.abacus,
+                              size: 16,
                               color: isSelected
                                   ? (widget.selectedLabelStyle?.color ??
                                         AppColors.darkBg)
@@ -225,7 +241,8 @@ class _AppSegmentedButtonState extends State<AppSegmentedButton> {
                       children: [
                         if (item.prefixIcon != null) ...[
                           HugeIcon(
-                            icon: HugeIconsStrokeRounded.abacus,     size: 16,
+                            icon: HugeIconsStrokeRounded.abacus,
+                            size: 16,
                             color: isSelected
                                 ? AppColors.darkBg
                                 : AppColors.black,
@@ -246,7 +263,8 @@ class _AppSegmentedButtonState extends State<AppSegmentedButton> {
                         if (item.suffixIcon != null) ...[
                           5.pw,
                           HugeIcon(
-                            icon: HugeIconsStrokeRounded.abacus,     size: 16,
+                            icon: HugeIconsStrokeRounded.abacus,
+                            size: 16,
                             color: isSelected
                                 ? AppColors.darkBg
                                 : AppColors.black,
@@ -261,6 +279,13 @@ class _AppSegmentedButtonState extends State<AppSegmentedButton> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    widget.pageController.removeListener(_onPageChanged);
+    _scrollController.dispose();
+    super.dispose();
   }
 }
 

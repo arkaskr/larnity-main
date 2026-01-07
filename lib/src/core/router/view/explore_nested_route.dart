@@ -15,7 +15,7 @@ import 'package:larnity/src/core/ui/widgets/app_dropdown.dart';
 
 class ExploreNestedRoute extends StatelessWidget {
   ExploreNestedRoute({Key? key, required this.navigationShell})
-      : super(key: key ?? const ValueKey('exploreNestedRoute'));
+    : super(key: key ?? const ValueKey('exploreNestedRoute'));
 
   final StatefulNavigationShell navigationShell;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
@@ -104,7 +104,7 @@ class ExploreNestedRoute extends StatelessWidget {
                         ),
                       ),
                       items: [
-                        AppDropdownItem(value: 'all', label: "All groups")
+                        AppDropdownItem(value: 'all', label: "All groups"),
                       ],
                     ),
                     Divider(color: AppColors.borderBrown),
@@ -137,8 +137,7 @@ class ExploreNestedRoute extends StatelessWidget {
                 child: AppDropdown(
                   button: Row(
                     children: [
-                      Expanded(
-                          child: Image.asset(AppAssets.images.logoWhite)),
+                      Expanded(child: Image.asset(AppAssets.images.logoWhite)),
                       AppSizes.xs.pw,
                       HugeIcon(
                         icon: HugeIconsStrokeRounded.unfoldMore,
@@ -205,52 +204,71 @@ class ExploreNestedRoute extends StatelessWidget {
             ),
             ListTile(
               leading: HugeIcon(
-                icon: HugeIconsStrokeRounded.home03,
-                color: AppColors.white,
-              ),
-              title: const Text('Home'),
-              onTap: () => _goBranch(0),
-            ),
-            ListTile(
-              leading: HugeIcon(
                 icon: HugeIconsStrokeRounded.compass01,
                 color: AppColors.white,
               ),
-              title: const Text('Explore'),
-              onTap: () => _goBranch(1),
-            ),
-            ListTile(
-              leading: HugeIcon(
-                icon: HugeIconsStrokeRounded.bookmark01,
-                color: AppColors.white,
+              title: Text(
+                AppStrings.exploreGroups,
+                style: AppTextStyles.button(),
               ),
-              title: const Text('Saved'),
-              onTap: () => _goBranch(2),
+              onTap: () {
+                // 1️⃣ Close drawer
+                Navigator.of(context).pop();
+
+                // 2️⃣ Redirect to Explore / Home
+                context.goNamed(Routes.explore);
+                // (or Routes.home if that’s your home route)
+              },
             ),
-            ListTile(
-              leading: HugeIcon(
-                icon: HugeIconsStrokeRounded.calendar01,
-                color: AppColors.white,
-              ),
-              title: const Text('My Learning'),
-              onTap: () => _goBranch(3),
-            ),
-            ListTile(
-              leading: HugeIcon(
-                icon: HugeIconsStrokeRounded.wallet01,
-                color: AppColors.white,
-              ),
-              title: const Text('Wallet'),
-              onTap: () => _goBranch(4),
-            ),
-            ListTile(
-              leading: HugeIcon(
-                icon: HugeIconsStrokeRounded.settings01,
-                color: AppColors.white,
-              ),
-              title: const Text('Settings'),
-              onTap: () => _goBranch(5),
-            ),
+
+            // ListTile(
+            //   leading: HugeIcon(
+            //     icon: HugeIconsStrokeRounded.home03,
+            //     color: AppColors.white,
+            //   ),
+            //   title: const Text('Home'),
+            //   onTap: () => _goBranch(0),
+            // ),
+            // ListTile(
+            //   leading: HugeIcon(
+            //     icon: HugeIconsStrokeRounded.compass01,
+            //     color: AppColors.white,
+            //   ),
+            //   title: const Text('Explore'),
+            //   onTap: () => _goBranch(1),
+            // ),
+            // ListTile(
+            //   leading: HugeIcon(
+            //     icon: HugeIconsStrokeRounded.bookmark01,
+            //     color: AppColors.white,
+            //   ),
+            //   title: const Text('Saved'),
+            //   onTap: () => _goBranch(2),
+            // ),
+            // ListTile(
+            //   leading: HugeIcon(
+            //     icon: HugeIconsStrokeRounded.calendar01,
+            //     color: AppColors.white,
+            //   ),
+            //   title: const Text('My Learning'),
+            //   onTap: () => _goBranch(3),
+            // ),
+            // ListTile(
+            //   leading: HugeIcon(
+            //     icon: HugeIconsStrokeRounded.wallet01,
+            //     color: AppColors.white,
+            //   ),
+            //   title: const Text('Wallet'),
+            //   onTap: () => _goBranch(4),
+            // ),
+            // ListTile(
+            //   leading: HugeIcon(
+            //     icon: HugeIconsStrokeRounded.settings01,
+            //     color: AppColors.white,
+            //   ),
+            //   title: const Text('Settings'),
+            //   onTap: () => _goBranch(5),
+            // ),
           ],
         ),
       ),

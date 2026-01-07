@@ -362,4 +362,9 @@ class AppStrings {
   static const String messageAppearHere = "Your messages will appear here";
   static const String selectMemberToChat = "Select a member to start chatting";
   static const String noConnectionErrorMessage = 'Not connected to a network!';
+
+  static const String name = "Name";
+  static const String addNewProduct = "Add New Product";
+  static const String addNewProductDesc =
+      "Upload and provide details for the new product";
 }

@@ -124,7 +124,6 @@ class GroupModel extends Equatable {
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'id': id,
-      // 'created_at': createdAt?.toIso8601String(),
       'name': name,
       'category': category,
       'thumbnail': thumbnail,
@@ -135,7 +134,7 @@ class GroupModel extends Equatable {
       'googleSheetId': googleSheetId,
       'enableGoogleSheetSync': enableGoogleSheetSync,
       'icon': icon,
-      // 'privacy': privacy?.name,
+      'privacy': privacy?.name, // ✅ Uncomment karo
       'active': active,
       'userId': userId,
       'domain': domain,
@@ -143,10 +142,9 @@ class GroupModel extends Equatable {
       'yearlyPrice': yearlyPrice,
       'lifetimePrice': lifetimePrice,
       'isSuspended': isSuspended,
-      // 'updated_at': updatedAt?.toIso8601String(),
       'packageSubscriptionId': packageSubscriptionId,
       'rejectionReason': rejectionReason,
-      // 'status': status?.name,
+      'status': status?.name, // ✅ Uncomment karo
       'slug': slug,
       'landingSettings': landingSettings,
     }..removeWhere((key, value) => value == null);
@@ -158,7 +156,9 @@ class GroupModel extends Equatable {
       createdAt: DateTime.parse(map['created_at'] as String),
       name: map['name'] as String,
       category: map['category'] as String,
-      thumbnail: map['thumbnail'] as String?,
+      // thumbnail: map['thumbnail'] as String?,
+      thumbnail: map['thumbnail'] as String? ?? map['icon'] as String?,
+
       description: map['description'] as String?,
       gallery: map['gallery'] != null
           ? List<String>.from(map['gallery'] as List)
