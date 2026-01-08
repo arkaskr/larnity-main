@@ -64,6 +64,96 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
     super.dispose();
   }
 
+  // Method to show account popup
+  // Updated _showAccountPopup method
+  void _showAccountPopup(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          margin: EdgeInsets.only(
+            top: MediaQuery.of(context).size.height * 0.6,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Draggable handle
+              Container(
+                width: 40,
+                height: 4,
+                margin: EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Account header
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                width: double.infinity,
+                child: Text(
+                  'Account',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.white,
+                  ),
+                ),
+              ),
+
+              Divider(color: Colors.grey[700], height: 1),
+
+              // Profile option
+              ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: 20),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  // Navigate to profile screen
+                  context.goNamed(Routes.profileSettings);
+                },
+                leading: Icon(Icons.person_outline, color: AppColors.white),
+                title: Text(
+                  'Profile',
+                  style: TextStyle(color: AppColors.white, fontSize: 16),
+                ),
+              ),
+
+              Divider(color: Colors.grey[700], height: 1),
+
+              // Logout option
+              ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: 20),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  ref.read(authProvider.notifier).signOut();
+                  context.goNamed(Routes.auth);
+                },
+                leading: Icon(Icons.logout, color: AppColors.red),
+                title: Text(
+                  'Logout',
+                  style: TextStyle(color: AppColors.red, fontSize: 16),
+                ),
+              ),
+
+              // Bottom padding
+              SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final groupState = ref.watch(groupProvider);
@@ -235,28 +325,6 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Explore Groups
-                      // GestureDetector(
-                      //   behavior: HitTestBehavior.opaque,
-                      //   onTap: () {
-                      //     Navigator.of(context).pop();
-                      //     context.goNamed(Routes.explore);
-                      //   },
-                      //   child: Row(
-                      //     children: [
-                      //       HugeIcon(
-                      //         icon: HugeIconsStrokeRounded.compass01,
-                      //         color: Colors.grey,
-                      //       ),
-                      //       8.pw,
-                      //       Text(
-                      //         "Explore Groups",
-                      //         style: AppTextStyles.button(),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
-
                       // General
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
@@ -440,74 +508,6 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
                           ],
                         ),
                       ),
-
-                      AppSizes.xs.ph,
-
-                      // Package Subscription
-                      // GestureDetector(
-                      //   behavior: HitTestBehavior.opaque,
-                      //   onTap: () {
-                      //     Navigator.of(context).pop();
-                      //     context.goNamed(Routes.packageSubscription);
-                      //   },
-                      //   child: Row(
-                      //     children: [
-                      //       HugeIcon(
-                      //         icon: HugeIconsStrokeRounded.package,
-                      //         color: Colors.grey,
-                      //       ),
-                      //       8.pw,
-                      //       Text(
-                      //         "Package Subscription",
-                      //         style: AppTextStyles.button(),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
-                      AppSizes.xs.ph,
-
-                      // Profile
-                      // GestureDetector(
-                      //   behavior: HitTestBehavior.opaque,
-                      //   onTap: () {
-                      //     Navigator.of(context).pop();
-                      //     context.goNamed(Routes.profileSettings);
-                      //   },
-                      //   child: Row(
-                      //     children: [
-                      //       HugeIcon(
-                      //         icon: HugeIconsStrokeRounded.userMultiple,
-                      //         color: Colors.grey,
-                      //       ),
-                      //       8.pw,
-                      //       Text("Profile", style: AppTextStyles.button()),
-                      //     ],
-                      //   ),
-                      // ),
-                      AppSizes.xs.ph,
-
-                      // Logout
-                      // GestureDetector(
-                      //   behavior: HitTestBehavior.opaque,
-                      //   onTap: () {
-                      //     Navigator.of(context).pop();
-                      //     ref.read(authProvider.notifier).signOut();
-                      //     context.goNamed(Routes.auth);
-                      //   },
-                      //   child: Row(
-                      //     children: [
-                      //       HugeIcon(
-                      //         icon: HugeIconsStrokeRounded.logout03,
-                      //         color: AppColors.red,
-                      //       ),
-                      //       8.pw,
-                      //       Text(
-                      //         "Logout",
-                      //         style: AppTextStyles.button(color: AppColors.red),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
                     ],
                   ),
                 ),
@@ -721,7 +721,7 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
               isSelected: false,
             ),
             _BuildNavItem(
-              onTap: () {},
+              onTap: () => _showAccountPopup(context),
               icon: Container(
                 height: 40,
                 width: 40,
@@ -729,6 +729,7 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
                   color: AppColors.primaryOrange,
                   shape: BoxShape.circle,
                 ),
+                child: Icon(Icons.person, color: Colors.white),
               ),
               isSelected: false,
             ),
