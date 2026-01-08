@@ -160,9 +160,7 @@ class GroupModel extends Equatable {
       createdAt: DateTime.parse(map['created_at'] as String),
       name: map['name'] as String,
       category: map['category'] as String,
-      // thumbnail: map['thumbnail'] as String?,
       thumbnail: map['thumbnail'] as String? ?? map['icon'] as String?,
-
       description: map['description'] as String?,
       gallery: map['gallery'] != null
           ? List<String>.from(map['gallery'] as List)
@@ -193,7 +191,10 @@ class GroupModel extends Equatable {
         orElse: () => GroupStatus.CREATED,
       ),
       slug: map['slug'] as String?,
-      landingSettings: map['landingSettings'] as Map<String, dynamic>?,
+      // ✅ FIX: Handle both String and Map for landingSettings
+      landingSettings: map['landingSettings'] is String
+          ? null // Agar string hai toh ignore karo
+          : map['landingSettings'] as Map<String, dynamic>?,
     );
   }
 

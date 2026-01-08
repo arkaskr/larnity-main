@@ -154,83 +154,86 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      /// Previous
-                      GestureDetector(
-                        onTap: _currentPage > 1
-                            ? () {
-                                setState(() {
-                                  _currentPage--;
-                                });
-                              }
-                            : null,
-                        child: Opacity(
-                          opacity: _currentPage > 1 ? 1 : 0.4,
-                          child: _pageButton('Previous'),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        /// Previous
+                        GestureDetector(
+                          onTap: _currentPage > 1
+                              ? () {
+                                  setState(() {
+                                    _currentPage--;
+                                  });
+                                }
+                              : null,
+                          child: Opacity(
+                            opacity: _currentPage > 1 ? 1 : 0.4,
+                            child: _pageButton('Previous'),
+                          ),
                         ),
-                      ),
 
-                      AppSizes.xs.pw,
+                        AppSizes.xs.pw,
 
-                      /// Page Numbers
-                      ...List.generate(totalPages, (index) {
-                        final page = index + 1;
-                        final isActive = page == _currentPage;
+                        /// Page Numbers
+                        ...List.generate(totalPages, (index) {
+                          final page = index + 1;
+                          final isActive = page == _currentPage;
 
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _currentPage = page;
-                              });
-                            },
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: isActive
-                                    ? AppColors.white
-                                    : AppColors.black,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: AppColors.white.withOpacity(0.2),
-                                ),
-                              ),
-                              child: Text(
-                                page.toString(),
-                                style: TextStyle(
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _currentPage = page;
+                                });
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
                                   color: isActive
-                                      ? AppColors.black
-                                      : AppColors.white,
-                                  fontWeight: FontWeight.w600,
+                                      ? AppColors.white
+                                      : AppColors.black,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: AppColors.white.withOpacity(0.2),
+                                  ),
+                                ),
+                                child: Text(
+                                  page.toString(),
+                                  style: TextStyle(
+                                    color: isActive
+                                        ? AppColors.black
+                                        : AppColors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
+                          );
+                        }),
+
+                        AppSizes.xs.pw,
+
+                        /// Next
+                        GestureDetector(
+                          onTap: _currentPage < totalPages
+                              ? () {
+                                  setState(() {
+                                    _currentPage++;
+                                  });
+                                }
+                              : null,
+                          child: Opacity(
+                            opacity: _currentPage < totalPages ? 1 : 0.4,
+                            child: _pageButton('Next'),
                           ),
-                        );
-                      }),
-
-                      AppSizes.xs.pw,
-
-                      /// Next
-                      GestureDetector(
-                        onTap: _currentPage < totalPages
-                            ? () {
-                                setState(() {
-                                  _currentPage++;
-                                });
-                              }
-                            : null,
-                        child: Opacity(
-                          opacity: _currentPage < totalPages ? 1 : 0.4,
-                          child: _pageButton('Next'),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
