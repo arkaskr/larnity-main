@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:larnity/src/core/constants/app_size.dart';
 import 'package:larnity/src/core/constants/app_strings.dart';
 import 'package:larnity/src/core/extensions/extensions.dart';
+import 'package:larnity/src/core/service/supabase/src/supabase_provider.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
@@ -10,12 +12,107 @@ import 'package:larnity/src/core/ui/widgets/app_dropdown.dart';
 import 'package:larnity/src/core/ui/widgets/phone_number_input.dart';
 import 'package:larnity/src/features/group/data/datasource/country_list_with_code.dart';
 import 'package:larnity/src/features/group/data/models/country_model.dart';
+import 'package:larnity/src/features/group/data/models/supporter_model.dart';
+import 'package:larnity/src/features/group/presentation/provider/supporter_provider.dart';
 
-class NewSupporter extends StatelessWidget {
-  const NewSupporter({Key? key}) : super(key: key);
+class NewSupporter extends ConsumerStatefulWidget {
+  final String groupId;
+
+  const NewSupporter({Key? key, required this.groupId}) : super(key: key);
+
+  @override
+  ConsumerState<NewSupporter> createState() => _NewSupporterState();
+}
+
+class _NewSupporterState extends ConsumerState<NewSupporter> {
+  final _phoneController = TextEditingController();
+  final _whatsappController = TextEditingController();
+  final _bookingLinkController = TextEditingController();
+
+  String? _selectedUserId;
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _whatsappController.dispose();
+    _bookingLinkController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleCreateSupporter() async {
+    if (_phoneController.text.isEmpty ||
+        _whatsappController.text.isEmpty ||
+        _bookingLinkController.text.isEmpty ||
+        _selectedUserId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      return;
+    }
+
+    final supporter = SupporterModel(
+      groupId: widget.groupId,
+      userId: _selectedUserId!,
+      phoneNumber: _phoneController.text,
+      whatsappNumber: _whatsappController.text,
+      link: _bookingLinkController.text,
+    );
+
+    final success = await ref
+        .read(supporterProvider)
+        .createSupporter(supporter);
+
+    if (success && mounted) {
+      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Supporter added successfully')),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed: ${ref.read(supporterProvider).errorMessage}'),
+        ),
+      );
+    }
+  }
+
+  // Fetch group members
+  Future<List<AppDropdownItem>> _fetchGroupMembers() async {
+    try {
+      final supabase = ref.read(supabaseClientProvider);
+
+      // Fetch members from your Members table based on groupId
+      final response = await supabase
+          .from('Members')
+          .select('userId, Users(id, name, email)')
+          .eq('groupId', widget.groupId);
+
+      return response.map<AppDropdownItem>((member) {
+        final userData = member['Users'] as Map<String, dynamic>?;
+        final userId = userData?['id'] as String? ?? '';
+        final name = userData?['name'] as String? ?? 'Unknown';
+        final email = userData?['email'] as String? ?? '';
+
+        return AppDropdownItem(value: userId, label: '$name ($email)');
+      }).toList();
+    } catch (e) {
+      // Fallback to current user if fetch fails
+      final currentUserId = ref
+          .read(supabaseClientProvider)
+          .auth
+          .currentUser
+          ?.id;
+      if (currentUserId != null) {
+        return [AppDropdownItem(value: currentUserId, label: 'Current User')];
+      }
+      return [];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = ref.watch(supporterProvider).isLoading;
+
     return Padding(
       padding: const EdgeInsets.all(AppSizes.xs),
       child: Column(
@@ -29,7 +126,7 @@ class NewSupporter extends StatelessWidget {
                 onPressed: () {
                   context.pop();
                 },
-                icon: Icon(Icons.close),
+                icon: const Icon(Icons.close),
               ),
             ],
           ),
@@ -60,85 +157,139 @@ class NewSupporter extends StatelessWidget {
           Text(AppStrings.selectMember, style: AppTextStyles.overLine()),
           AppSizes.xxxs.ph,
 
-          AppDropdown(
-            button: Container(
-              padding: EdgeInsets.all(AppSizes.xs),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: AppColors.skyBlue.withValues(alpha: 0.5),
-                ),
-                borderRadius: BorderRadius.circular(AppSizes.xs),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    AppStrings.searchMemberByEmail,
+          FutureBuilder<List<AppDropdownItem>>(
+            future: _fetchGroupMembers(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Container(
+                  padding: const EdgeInsets.all(AppSizes.xs),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: AppColors.skyBlue.withValues(alpha: 0.5),
+                    ),
+                    borderRadius: BorderRadius.circular(AppSizes.xs),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                );
+              }
+
+              final members = snapshot.data ?? [];
+
+              // If no members found, use current user as fallback
+              if (members.isEmpty) {
+                final currentUserId = ref
+                    .read(supabaseClientProvider)
+                    .auth
+                    .currentUser
+                    ?.id;
+                if (currentUserId != null && _selectedUserId == null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    setState(() {
+                      _selectedUserId = currentUserId;
+                    });
+                  });
+                }
+
+                return Container(
+                  padding: const EdgeInsets.all(AppSizes.xs),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: AppColors.skyBlue.withValues(alpha: 0.5),
+                    ),
+                    borderRadius: BorderRadius.circular(AppSizes.xs),
+                  ),
+                  child: Text(
+                    'Current User (auto-selected)',
                     style: AppTextStyles.bodyText2(color: AppColors.white),
                   ),
-                  Icon(Icons.keyboard_arrow_down, color: AppColors.white),
-                ],
-              ),
-            ),
-            items: [AppDropdownItem(value: "Member", label: "Member")],
+                );
+              }
+
+              return AppDropdown(
+                button: Container(
+                  padding: const EdgeInsets.all(AppSizes.xs),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: AppColors.skyBlue.withValues(alpha: 0.5),
+                    ),
+                    borderRadius: BorderRadius.circular(AppSizes.xs),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedUserId == null
+                              ? AppStrings.searchMemberByEmail
+                              : members
+                                        .firstWhere(
+                                          (m) => m.value == _selectedUserId,
+                                          orElse: () => members.first,
+                                        )
+                                        .label ??
+                                    'Member Selected',
+                          style: AppTextStyles.bodyText2(
+                            color: AppColors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppColors.white,
+                      ),
+                    ],
+                  ),
+                ),
+                onItemSelected: (value) {
+                  setState(() {
+                    _selectedUserId = value;
+                  });
+                },
+                items: members,
+              );
+            },
           ),
           AppSizes.xs.ph,
 
-          PhoneNumberInput(
-            countries: CountryListWithCode.countries,
-            initialCountry: CountryModel(
-              name: "India",
-              code: "+91",
-              flag: '🇮🇳',
-              codeAbbreviation: 'IN',
-              states: [
-                'Andaman and Nicobar Islands',
-                'Andhra Pradesh',
-                'Arunachal Pradesh',
-                'Assam',
-                'Bihar',
-                'Chandigarh',
-                'Chhattisgarh',
-                'Dadra and Nagar Haveli and Daman and Diu',
-                'Delhi',
-                'Goa',
-                'Gujarat',
-                'Haryana',
-                'Himachal Pradesh',
-                'Jammu and Kashmir',
-                'Jharkhand',
-                'Karnataka',
-                'Kerala',
-                'Ladakh',
-                'Lakshadweep',
-                'Madhya Pradesh',
-                'Maharashtra',
-                'Manipur',
-                'Meghalaya',
-                'Mizoram',
-                'Nagaland',
-                'Odisha',
-                'Puducherry',
-                'Punjab',
-                'Rajasthan',
-                'Sikkim',
-                'Tamil Nadu',
-                'Telangana',
-                'Tripura',
-                'Uttar Pradesh',
-                'Uttarakhand',
-                'West Bengal',
-              ],
+          Text(
+            AppStrings.phoneNumber ?? 'Phone Number',
+            style: AppTextStyles.overLine(),
+          ),
+          AppSizes.xxxs.ph,
+          TextFormField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppColors.darkBgContainer,
+              hintText: "00000-00000",
+              hintStyle: AppTextStyles.button(color: AppColors.skyBlue),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.xxxs),
+                borderSide: BorderSide(
+                  color: AppColors.skyBlue.withValues(alpha: 0.5),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSizes.xxxs),
+                borderSide: const BorderSide(color: AppColors.skyBlue),
+              ),
             ),
-            countryDropdownHint: "Country",
-            hintText: "00000-00000",
-            textStyle: AppTextStyles.overLine(color: AppColors.white),
           ),
 
           AppSizes.xs.ph,
           Text(AppStrings.whatsappNumber, style: AppTextStyles.overLine()),
           AppSizes.xxxs.ph,
           TextFormField(
+            controller: _whatsappController,
+            keyboardType: TextInputType.phone,
             decoration: InputDecoration(
               filled: true,
               fillColor: AppColors.darkBgContainer,
@@ -152,7 +303,7 @@ class NewSupporter extends StatelessWidget {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSizes.xxxs),
-                borderSide: BorderSide(color: AppColors.skyBlue),
+                borderSide: const BorderSide(color: AppColors.skyBlue),
               ),
             ),
           ),
@@ -161,6 +312,7 @@ class NewSupporter extends StatelessWidget {
           Text(AppStrings.booking, style: AppTextStyles.overLine()),
           AppSizes.xxxs.ph,
           TextFormField(
+            controller: _bookingLinkController,
             decoration: InputDecoration(
               filled: true,
               fillColor: AppColors.darkBgContainer,
@@ -174,14 +326,14 @@ class NewSupporter extends StatelessWidget {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppSizes.xxxs),
-                borderSide: BorderSide(color: AppColors.skyBlue),
+                borderSide: const BorderSide(color: AppColors.skyBlue),
               ),
             ),
           ),
           AppSizes.xs.ph,
           AppButton(
-            onPressed: () {},
-            label: AppStrings.create,
+            onPressed: isLoading ? null : _handleCreateSupporter,
+            label: isLoading ? "Creating..." : AppStrings.create,
             labelStyle: AppTextStyles.button(color: AppColors.black),
             bgColor: AppColors.primaryOrange,
           ),

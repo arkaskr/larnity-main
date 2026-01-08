@@ -31,6 +31,7 @@ class GroupModel extends Equatable {
   final GroupStatus? status;
   final String? slug;
   final Map<String, dynamic>? landingSettings;
+  final String? userRole;
 
   const GroupModel({
     this.id,
@@ -59,6 +60,7 @@ class GroupModel extends Equatable {
     this.status,
     this.slug,
     this.landingSettings,
+    this.userRole,
   });
 
   GroupModel copyWith({
@@ -88,6 +90,7 @@ class GroupModel extends Equatable {
     GroupStatus? status,
     String? slug,
     Map<String, dynamic>? landingSettings,
+    String? userRole,
   }) {
     return GroupModel(
       id: id ?? this.id,
@@ -118,13 +121,13 @@ class GroupModel extends Equatable {
       status: status ?? this.status,
       slug: slug ?? this.slug,
       landingSettings: landingSettings ?? this.landingSettings,
+      userRole: userRole ?? this.userRole,
     );
   }
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'id': id,
-      // 'created_at': createdAt?.toIso8601String(),
       'name': name,
       'category': category,
       'thumbnail': thumbnail,
@@ -135,7 +138,7 @@ class GroupModel extends Equatable {
       'googleSheetId': googleSheetId,
       'enableGoogleSheetSync': enableGoogleSheetSync,
       'icon': icon,
-      // 'privacy': privacy?.name,
+      'privacy': privacy?.name, // ✅ Uncomment karo
       'active': active,
       'userId': userId,
       'domain': domain,
@@ -143,10 +146,9 @@ class GroupModel extends Equatable {
       'yearlyPrice': yearlyPrice,
       'lifetimePrice': lifetimePrice,
       'isSuspended': isSuspended,
-      // 'updated_at': updatedAt?.toIso8601String(),
       'packageSubscriptionId': packageSubscriptionId,
       'rejectionReason': rejectionReason,
-      // 'status': status?.name,
+      'status': status?.name, // ✅ Uncomment karo
       'slug': slug,
       'landingSettings': landingSettings,
     }..removeWhere((key, value) => value == null);
@@ -158,7 +160,9 @@ class GroupModel extends Equatable {
       createdAt: DateTime.parse(map['created_at'] as String),
       name: map['name'] as String,
       category: map['category'] as String,
-      thumbnail: map['thumbnail'] as String?,
+      // thumbnail: map['thumbnail'] as String?,
+      thumbnail: map['thumbnail'] as String? ?? map['icon'] as String?,
+
       description: map['description'] as String?,
       gallery: map['gallery'] != null
           ? List<String>.from(map['gallery'] as List)
@@ -227,6 +231,7 @@ class GroupModel extends Equatable {
     status,
     slug,
     landingSettings,
+    userRole,
   ];
 
   @override

@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:larnity/src/core/constants/app_size.dart';
 import 'package:larnity/src/core/constants/app_strings.dart';
 import 'package:larnity/src/core/extensions/extensions.dart';
@@ -8,12 +11,63 @@ import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
 import 'package:larnity/src/core/ui/widgets/app_dropdown.dart';
 import 'package:larnity/src/core/ui/widgets/app_dropdown_slash_editor.dart';
+import 'package:larnity/src/core/utils/async_states.dart';
+import 'package:larnity/src/core/utils/show_snackbar.dart';
+import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 
-class GeneralSettingsScreen extends StatelessWidget {
+class GeneralSettingsScreen extends ConsumerStatefulWidget {
   const GeneralSettingsScreen({Key? key}) : super(key: key);
 
   @override
+  ConsumerState<GeneralSettingsScreen> createState() =>
+      _GeneralSettingsScreenState();
+}
+
+class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final groupState = ref.read(groupProvider);
+      print("🔍 DEBUG: Group in state = ${groupState.group?.id}"); // ✅ Add this
+      if (groupState.group == null) {
+        showErrorToast(
+          content: "No group selected. Please select a group first.",
+        );
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final groupState = ref.watch(groupProvider);
+    final groupNotifier = ref.read(groupProvider.notifier);
+    final currentGroup = groupState.group;
+
+    if (currentGroup == null) {
+      return Scaffold(
+        backgroundColor: AppColors.darkBg,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "No group selected",
+                style: AppTextStyles.headline3(color: AppColors.white),
+              ),
+              AppSizes.xs.ph,
+              Text(
+                "Please select a group from the menu",
+                style: AppTextStyles.bodyText1(
+                  color: AppColors.white.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.darkBg,
       body: Padding(
@@ -30,6 +84,8 @@ class GeneralSettingsScreen extends StatelessWidget {
               AppSizes.xxxs.ph,
               Text(AppStrings.groupSettingsDesc),
               AppSizes.xxxlg.ph,
+
+              // Group URL Share Section
               Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSizes.xxs,
@@ -45,20 +101,18 @@ class GeneralSettingsScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        "https://www.larnity.com/about/canva-capsul-class",
+                        "https://www.larnity.com/about/${currentGroup?.slug ?? 'group'}",
                         style: AppTextStyles.overLine(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     AppSizes.xs.pw,
-
                     AppButton(
                       height: 40,
                       isExpanded: false,
                       onPressed: () {},
                       label: "Share",
-
                       labelStyle: AppTextStyles.bodyText2(
                         color: AppColors.white,
                       ),
@@ -70,6 +124,8 @@ class GeneralSettingsScreen extends StatelessWidget {
                 ),
               ),
               AppSizes.xxxlg.ph,
+
+              // Thumbnail Section
               Text(
                 AppStrings.groupThumbnail,
                 style: AppTextStyles.headline4(color: AppColors.white),
@@ -81,23 +137,37 @@ class GeneralSettingsScreen extends StatelessWidget {
                   Expanded(
                     child: Container(
                       height: 0.2.sh,
-
                       decoration: BoxDecoration(
                         color: AppColors.primaryOrange,
                         borderRadius: BorderRadius.circular(AppSizes.xxxs),
+                        image: _getThumbnailImage(groupState, currentGroup),
                       ),
+                      child:
+                          _getThumbnailImage(groupState, currentGroup) == null
+                          ? Center(
+                              child: Icon(
+                                Icons.image,
+                                size: 60,
+                                color: AppColors.white.withValues(alpha: 0.5),
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                 ],
               ),
               AppSizes.xxlg.ph,
               AppButton(
-                onPressed: () {},
+                onPressed: () {
+                  groupNotifier.pickThumbnail();
+                },
                 bgColor: AppColors.darkBgContainer,
                 label: AppStrings.changeThumbnail,
                 labelStyle: AppTextStyles.button(color: AppColors.white),
               ),
               AppSizes.xxxlg.ph,
+
+              // Privacy Section
               Text(
                 AppStrings.groupPrivacy,
                 style: AppTextStyles.headline5(color: AppColors.white),
@@ -116,7 +186,7 @@ class GeneralSettingsScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "PRIVATE",
+                        currentGroup?.privacy?.name ?? "PRIVATE",
                         style: AppTextStyles.bodyText2(color: AppColors.white),
                       ),
                       Icon(Icons.keyboard_arrow_down, color: AppColors.white),
@@ -125,12 +195,14 @@ class GeneralSettingsScreen extends StatelessWidget {
                 ),
                 items: [
                   AppDropdownItem(value: "private", label: "PRIVATE"),
-                  AppDropdownItem(value: "private", label: "PUBLIC"),
+                  AppDropdownItem(value: "public", label: "PUBLIC"),
                 ],
               ),
               AppSizes.lg.ph,
+
+              // Group Icon Section
               Text(
-                AppStrings.groupPrivacy,
+                "Group Icon",
                 style: AppTextStyles.headline5(color: AppColors.white),
               ),
               AppSizes.lg.ph,
@@ -147,20 +219,23 @@ class GeneralSettingsScreen extends StatelessWidget {
                 isExpanded: false,
                 onPressed: () {},
                 bgColor: AppColors.darkBgContainer,
-                label: AppStrings.changeThumbnail,
+                label: "Change Icon",
                 labelStyle: AppTextStyles.button(color: AppColors.white),
               ),
               AppSizes.xxlg.ph,
+
+              // Group Name
               Text(
                 AppStrings.groupName,
                 style: AppTextStyles.headline5(color: AppColors.white),
               ),
               AppSizes.xxxs.ph,
               TextFormField(
+                initialValue: currentGroup?.name,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.darkBgContainer,
-                  hintText: "Sifat",
+                  hintText: "Group Name",
                   hintStyle: AppTextStyles.button(color: AppColors.skyBlue),
                   border: OutlineInputBorder(borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(
@@ -170,16 +245,19 @@ class GeneralSettingsScreen extends StatelessWidget {
                 ),
               ),
               AppSizes.lg.ph,
+
+              // Group Slug
               Text(
                 AppStrings.groupSlug,
                 style: AppTextStyles.headline5(color: AppColors.white),
               ),
               AppSizes.xxxs.ph,
               TextFormField(
+                initialValue: currentGroup?.slug,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.darkBgContainer,
-                  hintText: "Sifat",
+                  hintText: "group-slug",
                   hintStyle: AppTextStyles.button(color: AppColors.skyBlue),
                   border: OutlineInputBorder(borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(
@@ -189,6 +267,8 @@ class GeneralSettingsScreen extends StatelessWidget {
                 ),
               ),
               AppSizes.xxlg.ph,
+
+              // Group Description
               Text(
                 AppStrings.groupDesc,
                 style: AppTextStyles.headline5(color: AppColors.white),
@@ -196,6 +276,8 @@ class GeneralSettingsScreen extends StatelessWidget {
               AppSizes.xxxs.ph,
               AppDropdownSlashEditor(),
               AppSizes.xxlg.ph,
+
+              // Show Group Name Toggle
               SwitchListTile(
                 controlAffinity: ListTileControlAffinity.leading,
                 value: true,
@@ -203,16 +285,58 @@ class GeneralSettingsScreen extends StatelessWidget {
                 title: Text(AppStrings.groupNameShown),
               ),
               AppSizes.lg.ph,
+
+              // Save Changes Button
               AppButton(
-                onPressed: () {},
+                isLoading: groupState.updateState == AsyncState.loading,
+                onPressed: () async {
+                  if (currentGroup?.id == null) {
+                    showErrorToast(content: "No group selected");
+                    return;
+                  }
+                  if (groupState.selectedThumbnail == null) {
+                    showErrorToast(content: "Please select a thumbnail first");
+                    return;
+                  }
+                  await groupNotifier.fetchGroupById(currentGroup!.id!);
+
+                  groupNotifier.updateGroupThumbnail(
+                    groupId: currentGroup!.id!,
+                    successCallBack: () {
+                      showSuccessToast(
+                        content: "Thumbnail updated successfully",
+                      );
+                    },
+                    failureCallBack: (error) {
+                      showErrorToast(content: error);
+                    },
+                  );
+                },
                 bgColor: AppColors.primaryOrange,
                 label: AppStrings.saveChanges,
                 labelStyle: AppTextStyles.button(color: AppColors.black),
               ),
+              AppSizes.xxxlg.ph,
             ],
           ),
         ),
       ),
     );
+  }
+
+  DecorationImage? _getThumbnailImage(groupState, currentGroup) {
+    // Priority: selectedThumbnail (local file) > existing thumbnail URL
+    if (groupState.selectedThumbnail != null) {
+      return DecorationImage(
+        image: FileImage(File(groupState.selectedThumbnail!.path)),
+        fit: BoxFit.cover,
+      );
+    } else if (currentGroup?.thumbnail != null) {
+      return DecorationImage(
+        image: NetworkImage(currentGroup!.thumbnail!),
+        fit: BoxFit.cover,
+      );
+    }
+    return null;
   }
 }

@@ -6,7 +6,6 @@ import 'package:hugeicons/styles/stroke_rounded.dart';
 import 'package:larnity/src/core/constants/app_size.dart';
 import 'package:larnity/src/core/constants/app_strings.dart';
 import 'package:larnity/src/core/extensions/extensions.dart';
-import 'package:larnity/src/core/extensions/screen_size_extension.dart';
 import 'package:larnity/src/core/router/router.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
@@ -14,16 +13,105 @@ import 'package:larnity/src/core/ui/widgets/app_button.dart';
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/auth/presentation/provider/auth_provider.dart';
 import 'package:larnity/src/core/utils/async_states.dart';
-import 'package:larnity/src/features/group/data/models/group_model.dart';
 
 class MembersRoomScreen extends ConsumerWidget {
   const MembersRoomScreen({Key? key}) : super(key: key);
+
+  // ✅ Separate method for start chat
+  void _handleStartChat(BuildContext context, WidgetRef ref, dynamic group) {
+    if (!context.mounted) return;
+
+    try {
+      // ✅ Set group state first
+      ref.read(groupProvider.notifier).setSelectedGroup(group);
+
+      // ✅ Navigate on next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          context.pushNamed(Routes.chatting);
+        }
+      });
+    } catch (e) {
+      debugPrint('Error in start chat: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open chat: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ✅ Separate method for join group
+  Future<void> _handleJoinGroup(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic group,
+    String? userId,
+  ) async {
+    if (!context.mounted) return;
+
+    if (userId == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login first'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Check if group is paid
+    if (group.monthlyPrice != null ||
+        group.yearlyPrice != null ||
+        group.lifetimePrice != null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment feature coming soon'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Free group - join directly
+      final success = await ref
+          .read(groupProvider.notifier)
+          .joinGroup(groupId: group.id!);
+
+      if (!context.mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Successfully joined ${group.name}!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        final error = ref.read(groupProvider).error ?? 'Failed to join';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groupState = ref.watch(groupProvider);
     final authState = ref.watch(authProvider);
-    
+
     // Get current user
     final currentUser = authState.user;
 
@@ -83,7 +171,6 @@ class MembersRoomScreen extends ConsumerWidget {
                     ],
                   ),
                   Spacer(),
-                  // Add a settings button that opens a dialog with "Go to Settings" option
                   IconButton(
                     icon: HugeIcon(
                       icon: HugeIconsStrokeRounded.settings01,
@@ -92,12 +179,14 @@ class MembersRoomScreen extends ConsumerWidget {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        builder: (BuildContext context) {
+                        builder: (BuildContext dialogContext) {
                           return AlertDialog(
                             backgroundColor: AppColors.darkBg,
                             title: Text(
                               'Options',
-                              style: AppTextStyles.headline4(color: AppColors.white),
+                              style: AppTextStyles.headline4(
+                                color: AppColors.white,
+                              ),
                             ),
                             content: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -105,11 +194,15 @@ class MembersRoomScreen extends ConsumerWidget {
                                 ListTile(
                                   title: Text(
                                     'Go to Settings',
-                                    style: AppTextStyles.bodyText1(color: AppColors.white),
+                                    style: AppTextStyles.bodyText1(
+                                      color: AppColors.white,
+                                    ),
                                   ),
                                   onTap: () {
-                                    Navigator.of(context).pop();
-                                    context.pushNamed(Routes.profileSettings);
+                                    Navigator.of(dialogContext).pop();
+                                    if (context.mounted) {
+                                      context.pushNamed(Routes.profileSettings);
+                                    }
                                   },
                                 ),
                               ],
@@ -117,11 +210,13 @@ class MembersRoomScreen extends ConsumerWidget {
                             actions: [
                               TextButton(
                                 onPressed: () {
-                                  Navigator.of(context).pop();
+                                  Navigator.of(dialogContext).pop();
                                 },
                                 child: Text(
                                   'Cancel',
-                                  style: AppTextStyles.button(color: AppColors.primaryOrange),
+                                  style: AppTextStyles.button(
+                                    color: AppColors.primaryOrange,
+                                  ),
                                 ),
                               ),
                             ],
@@ -134,238 +229,320 @@ class MembersRoomScreen extends ConsumerWidget {
               ),
               AppSizes.xxxlg.ph,
               TextFormField(
+                style: AppTextStyles.bodyText1(color: AppColors.white),
+                cursorColor: AppColors.primaryOrange,
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: AppColors.darkBgContainer,
+                  fillColor: AppColors.darkBgContainer.withValues(alpha: 0.8),
                   hintText: AppStrings.searchMembers,
-                  hintStyle: AppTextStyles.button(color: AppColors.skyBlue),
-                  prefixIcon: HugeIcon(
-                    icon: HugeIconsStrokeRounded.search01,
-                    color: AppColors.white,
+                  hintStyle: AppTextStyles.bodyText2(
+                    color: AppColors.creamWhite.withValues(alpha: 0.6),
+                  ),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: HugeIcon(
+                      icon: HugeIconsStrokeRounded.search01,
+                      color: AppColors.creamWhite.withValues(alpha: 0.7),
+                      size: 20,
+                    ),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 12,
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.xxxs),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: AppColors.skyBlue.withValues(alpha: 0.5),
+                      color: AppColors.white.withValues(alpha: 0.08),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.xxxs),
-                    borderSide: BorderSide(color: AppColors.skyBlue),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: AppColors.primaryOrange,
+                      width: 1.2,
+                    ),
                   ),
                 ),
               ),
               AppSizes.xxxlg.ph,
-              // Display groups instead of user profiles
+              // Display groups
               if (groupState.fetchState == AsyncState.loading)
-                Center(child: CircularProgressIndicator())
+                const Center(child: CircularProgressIndicator())
               else if (groupState.fetchState == AsyncState.failure)
-                Center(child: Text('Failed to load groups'))
-              else if (groupState.groups != null && groupState.groups!.isNotEmpty)
+                const Center(child: Text('Failed to load groups'))
+              else if (groupState.groups != null &&
+                  groupState.groups!.isNotEmpty)
                 Column(
-                  children: groupState.groups!.map((group) {
-                    return Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(AppSizes.xs),
-                      margin: EdgeInsets.only(bottom: AppSizes.xs),
-                      decoration: BoxDecoration(
-                        color: AppColors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(AppSizes.xs),
-                        border: Border.all(
-                          color: AppColors.primaryOrange,
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              // Group icon
-                              Container(
-                                height: 50,
-                                width: 50,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryOrange,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: group.icon != null
-                                    ? Image.network(
-                                        group.icon!,
-                                        fit: BoxFit.contain,
-                                      )
-                                    : Icon(
-                                        Icons.group,
-                                        color: AppColors.white,
-                                      ),
-                              ),
-                              AppSizes.xs.pw,
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      group.name,
-                                      style: AppTextStyles.headline3(),
-                                    ),
-                                    if (group.category != null)
-                                      Text(
-                                        group.category!,
-                                        style: AppTextStyles.overLine(
-                                          color: AppColors.creamWhite,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              // Settings button for each group
-                              IconButton(
-                                icon: HugeIcon(
-                                  icon: HugeIconsStrokeRounded.settings01,
-                                  color: AppColors.white,
-                                ),
-                                onPressed: () {
-                                  // Show group settings dialog
-                                  showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        backgroundColor: AppColors.darkBg,
-                                        title: Text(
-                                          'Group Options',
-                                          style: AppTextStyles.headline4(color: AppColors.white),
-                                        ),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            ListTile(
-                                              title: Text(
-                                                'Go to Group Settings',
-                                                style: AppTextStyles.bodyText1(color: AppColors.white),
-                                              ),
-                                              onTap: () {
-                                                Navigator.of(context).pop();
-                                                // Navigate to group settings page with group ID
-                                                context.pushNamed(
-                                                  Routes.groupDetails,
-                                                  extra: group,
-                                                );
-                                              },
-                                            ),
-                                            ListTile(
-                                              title: Text(
-                                                'View Members',
-                                                style: AppTextStyles.bodyText1(color: AppColors.white),
-                                              ),
-                                              onTap: () {
-                                                Navigator.of(context).pop();
-                                                // Could navigate to a members list page
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context).pop();
-                                            },
-                                            child: Text(
-                                              'Cancel',
-                                              style: AppTextStyles.button(color: AppColors.primaryOrange),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                          AppSizes.xs.ph,
-                          if (group.description != null)
-                            Text(
-                              group.description!,
-                              style: AppTextStyles.bodyText2(
-                                color: AppColors.creamWhite,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                  children: groupState.groups!
+                      .where((group) => group.userId == currentUser?.id)
+                      .map((group) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(AppSizes.xs),
+                          margin: const EdgeInsets.only(bottom: AppSizes.xs),
+                          decoration: BoxDecoration(
+                            color: AppColors.black.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(AppSizes.xs),
+                            border: Border.all(
+                              color: AppColors.primaryOrange,
+                              width: 1,
                             ),
-                          AppSizes.xs.ph,
-                          // Group stats
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  HugeIcon(
-                                    icon: HugeIconsStrokeRounded.userMultiple02,
-                                    color: AppColors.white,
-                                    size: 16,
+                                  Container(
+                                    height: 50,
+                                    width: 50,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryOrange,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: group.icon != null
+                                        ? Image.network(
+                                            group.icon!,
+                                            fit: BoxFit.contain,
+                                          )
+                                        : Icon(
+                                            Icons.group,
+                                            color: AppColors.white,
+                                          ),
                                   ),
-                                  AppSizes.xxxs.pw,
-                                  Text(
-                                    "0 members", // Would be actual member count in real implementation
-                                    style: AppTextStyles.caption2(),
+                                  AppSizes.xs.pw,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              group.name,
+                                              style: AppTextStyles.headline3(),
+                                            ),
+                                            if (group.userRole != null) ...[
+                                              AppSizes.xxxs.pw,
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: _getRoleColor(
+                                                    group.userRole!,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  group.userRole!,
+                                                  style: AppTextStyles.caption2(
+                                                    color: AppColors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        if (group.category != null)
+                                          Text(
+                                            group.category!,
+                                            style: AppTextStyles.overLine(
+                                              color: AppColors.creamWhite,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: HugeIcon(
+                                      icon: HugeIconsStrokeRounded.settings01,
+                                      color: AppColors.white,
+                                    ),
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext dialogContext) {
+                                          return AlertDialog(
+                                            backgroundColor: AppColors.darkBg,
+                                            title: Text(
+                                              'Group Options',
+                                              style: AppTextStyles.headline4(
+                                                color: AppColors.white,
+                                              ),
+                                            ),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                ListTile(
+                                                  title: Text(
+                                                    'Go to Group Settings',
+                                                    style:
+                                                        AppTextStyles.bodyText1(
+                                                          color:
+                                                              AppColors.white,
+                                                        ),
+                                                  ),
+                                                  onTap: () {
+                                                    Navigator.of(
+                                                      dialogContext,
+                                                    ).pop();
+                                                    if (context.mounted) {
+                                                      context.pushNamed(
+                                                        Routes.groupDetails,
+                                                        extra: group,
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                                ListTile(
+                                                  title: Text(
+                                                    'View Members',
+                                                    style:
+                                                        AppTextStyles.bodyText1(
+                                                          color:
+                                                              AppColors.white,
+                                                        ),
+                                                  ),
+                                                  onTap: () {
+                                                    Navigator.of(
+                                                      dialogContext,
+                                                    ).pop();
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.of(
+                                                    dialogContext,
+                                                  ).pop();
+                                                },
+                                                child: Text(
+                                                  'Cancel',
+                                                  style: AppTextStyles.button(
+                                                    color:
+                                                        AppColors.primaryOrange,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
-                              if (group.createdAt != null)
+                              AppSizes.xs.ph,
+                              if (group.description != null)
                                 Text(
-                                  "Created: ${group.createdAt!.toLocal().toString().split(' ')[0]}",
-                                  style: AppTextStyles.caption2(
+                                  group.description!,
+                                  style: AppTextStyles.bodyText2(
                                     color: AppColors.creamWhite,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                              AppSizes.xs.ph,
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      HugeIcon(
+                                        icon: HugeIconsStrokeRounded
+                                            .userMultiple02,
+                                        color: AppColors.white,
+                                        size: 16,
+                                      ),
+                                      AppSizes.xxxs.pw,
+                                      Text(
+                                        "0 members",
+                                        style: AppTextStyles.caption2(),
+                                      ),
+                                    ],
+                                  ),
+                                  if (group.createdAt != null)
+                                    Text(
+                                      "Created: ${group.createdAt!.toLocal().toString().split(' ')[0]}",
+                                      style: AppTextStyles.caption2(
+                                        color: AppColors.creamWhite,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              AppSizes.xxxlg.ph,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: AppButton(
+                                      onPressed: () => _handleJoinGroup(
+                                        context,
+                                        ref,
+                                        group,
+                                        currentUser?.id,
+                                      ),
+                                      label: "Join Group",
+                                      labelStyle: AppTextStyles.caption2(
+                                        color: AppColors.black,
+                                      ),
+                                      bgColor: AppColors.primaryOrange,
+                                    ),
+                                  ),
+                                  AppSizes.xs.pw,
+                                  Expanded(
+                                    child: AppButton(
+                                      onPressed: () =>
+                                          _handleStartChat(context, ref, group),
+                                      label: AppStrings.startChat,
+                                      prefix: HugeIcon(
+                                        icon: HugeIconsStrokeRounded.message02,
+                                        color: AppColors.black,
+                                      ),
+                                      labelStyle: AppTextStyles.caption2(
+                                        color: AppColors.black,
+                                      ),
+                                      bgColor: AppColors.primaryOrange,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                          AppSizes.xxxlg.ph,
-                          // Action buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppButton(
-                                  onPressed: () {
-                                    // Join group functionality
-                                  },
-                                  label: "Join Group",
-                                  labelStyle: AppTextStyles.caption2(
-                                    color: AppColors.black,
-                                  ),
-                                  bgColor: AppColors.primaryOrange,
-                                ),
-                              ),
-                              AppSizes.xs.pw,
-                              Expanded(
-                                child: AppButton(
-                                  onPressed: () {
-                                    context.pushNamed(Routes.chatting);
-                                  },
-                                  label: AppStrings.startChat,
-                                  prefix: HugeIcon(
-                                    icon: HugeIconsStrokeRounded.message02,
-                                    color: AppColors.black,
-                                  ),
-                                  labelStyle: AppTextStyles.caption2(
-                                    color: AppColors.black,
-                                  ),
-                                  bgColor: AppColors.primaryOrange,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                        );
+                      })
+                      .toList(),
                 )
               else
-                Center(child: Text('No groups found')),
+                const Center(child: Text('No groups found')),
             ],
           ),
         ),
       ),
     );
+  }
+
+  // ✅ ADD THIS METHOD
+  Color _getRoleColor(String role) {
+    switch (role.toUpperCase()) {
+      case 'ADMIN':
+        return AppColors.primaryOrange;
+      case 'MEMBER':
+        return AppColors.green;
+      case 'MANAGER':
+        return AppColors.skyBlue;
+      default:
+        return AppColors.creamWhite;
+    }
   }
 }

@@ -42,8 +42,23 @@ class ClassRoomScreen extends StatelessWidget {
                   showDialog(
                     context: context,
                     builder: (context) => Dialog(
+                      insetPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 24,
+                      ),
                       backgroundColor: AppColors.bgBlue,
-                      child: CreateCourse(),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.xxxs),
+                      ),
+                      child: SizedBox(
+                        width:
+                            MediaQuery.of(context).size.width *
+                            0.95, // width badhi
+                        height:
+                            MediaQuery.of(context).size.height *
+                            0.65, // height kam
+                        child: const CreateCourse(),
+                      ),
                     ),
                   );
                 },

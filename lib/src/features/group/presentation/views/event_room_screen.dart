@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';
 import 'package:larnity/src/core/constants/app_size.dart';
@@ -8,37 +9,61 @@ import 'package:larnity/src/core/extensions/screen_size_extension.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
-import 'package:larnity/src/features/group/presentation/widgets/add_class.dart';
+import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/presentation/widgets/add_event.dart';
 import 'package:larnity/src/features/group/presentation/widgets/view_event.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
-class EventRoomScreen extends StatelessWidget {
+class EventRoomScreen extends ConsumerWidget {
   const EventRoomScreen({Key? key}) : super(key: key);
 
   _AppointmentDataSource _getCalendarDataSource() {
-    List<Appointment> appointments = <Appointment>[];
-    appointments.add(
+    final List<Appointment> appointments = <Appointment>[
       Appointment(
         startTime: DateTime.now(),
-        endTime: DateTime.now().add(Duration(minutes: 10)),
+        endTime: DateTime.now().add(const Duration(minutes: 10)),
         subject: 'Meeting',
         color: Colors.blue,
-        // startTimeZone: '',
-        // endTimeZone: '',
       ),
-    );
-
+    ];
     return _AppointmentDataSource(appointments);
   }
 
+  Widget _buildSizedDialog(
+    BuildContext context, {
+    required Widget child,
+    double heightFactor = 0.65,
+  }) {
+    final size = MediaQuery.of(context).size;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+      backgroundColor: AppColors.bgBlue,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSizes.xxxs),
+      ),
+      child: SizedBox(
+        width: size.width * 0.95,
+        height: size.height * heightFactor,
+        child: child,
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final groupState = ref.watch(groupProvider);
+    final currentGroupId = groupState.group?.id;
+
+    if (currentGroupId == null) {
+      return Center(child: Text('No group selected'));
+    }
+
     return SingleChildScrollView(
       child: Column(
         children: [
           AppSizes.xs.ph,
-          Container(
+          SizedBox(
             height: 1.sh,
             child: Column(
               children: [
@@ -50,15 +75,15 @@ class EventRoomScreen extends StatelessWidget {
                       AppStrings.myEvents,
                       style: AppTextStyles.headline2(color: AppColors.white),
                     ),
-
                     AppButton(
                       isExpanded: false,
                       onPressed: () {
                         showDialog(
                           context: context,
-                          builder: (context) => Dialog(
-                            backgroundColor: AppColors.bgBlue,
-                            child: AddEvent(),
+                          builder: (_) => _buildSizedDialog(
+                            context,
+                            child: AddEvent(groupId: currentGroupId),
+                            heightFactor: 0.65,
                           ),
                         );
                       },
@@ -82,15 +107,15 @@ class EventRoomScreen extends StatelessWidget {
                     dataSource: _getCalendarDataSource(),
                     allowDragAndDrop: true,
                     view: CalendarView.month,
-
                     appointmentBuilder: (context, calendarAppointmentDetails) {
                       return GestureDetector(
                         onTap: () {
                           showDialog(
                             context: context,
-                            builder: (context) => Dialog(
-                              backgroundColor: AppColors.bgBlue,
-                              child: ViewEvent(),
+                            builder: (_) => _buildSizedDialog(
+                              context,
+                              child: const ViewEvent(),
+                              heightFactor: 0.6,
                             ),
                           );
                         },
@@ -104,13 +129,13 @@ class EventRoomScreen extends StatelessWidget {
                               Container(
                                 height: 20,
                                 width: 20,
-                                decoration: BoxDecoration(
+                                decoration: const BoxDecoration(
                                   color: AppColors.primaryOrange,
                                   shape: BoxShape.circle,
                                 ),
                               ),
                               AppSizes.xxxs.pw,
-                              Expanded(
+                              const Expanded(
                                 child: Text(
                                   "demogsdgsdbsbsg",
                                   overflow: TextOverflow.fade,
@@ -122,13 +147,13 @@ class EventRoomScreen extends StatelessWidget {
                         ),
                       );
                     },
-
                     onTap: (calendarTapDetails) {
                       showDialog(
                         context: context,
-                        builder: (context) => Dialog(
-                          backgroundColor: AppColors.bgBlue,
-                          child: AddEvent(),
+                        builder: (_) => _buildSizedDialog(
+                          context,
+                          child: AddEvent(groupId: currentGroupId),
+                          heightFactor: 0.65,
                         ),
                       );
                     },
@@ -139,7 +164,7 @@ class EventRoomScreen extends StatelessWidget {
                     timeSlotViewSettings: const TimeSlotViewSettings(
                       minimumAppointmentDuration: Duration(minutes: 60),
                     ),
-                    scheduleViewSettings: ScheduleViewSettings(
+                    scheduleViewSettings: const ScheduleViewSettings(
                       appointmentItemHeight: 20,
                     ),
                   ),

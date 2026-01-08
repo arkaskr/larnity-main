@@ -14,7 +14,7 @@ import 'package:larnity/src/core/router/router.dart';
 
 class GroupCard extends ConsumerWidget {
   final GroupModel? group;
-  
+
   const GroupCard({super.key, this.group});
 
   @override
@@ -23,8 +23,11 @@ class GroupCard extends ConsumerWidget {
     final groupName = group?.name ?? "Untitled Group";
     final groupDescription = group?.description ?? "No description provided";
     final groupCategory = group?.category ?? "Uncategorized";
-    final memberCount = "0"; // This would come from actual data in a real implementation
-    final price = group?.lifetimePrice != null ? "₹${group!.lifetimePrice}/lifetime" : "Free";
+    final memberCount =
+        "0"; // This would come from actual data in a real implementation
+    final price = group?.lifetimePrice != null
+        ? "₹${group!.lifetimePrice}/lifetime"
+        : "Free";
 
     return GestureDetector(
       onTap: () {
@@ -52,18 +55,37 @@ class GroupCard extends ConsumerWidget {
                   top: Radius.circular(AppSizes.xs),
                 ),
               ),
+              // Line 56-68 replace karo:
               child: group?.thumbnail != null
-                  ? Image.network(
-                      group!.thumbnail!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => 
-                        Center(
-                          child: Icon(
-                            Icons.group,
-                            size: 30,
-                            color: AppColors.white,
-                          ),
-                        ),
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(AppSizes.xs),
+                      ),
+                      child: Image.network(
+                        group!.thumbnail!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(
+                              Icons.error_outline,
+                              size: 30,
+                              color: AppColors.white,
+                            ),
+                          );
+                        },
+                      ),
                     )
                   : Center(
                       child: Icon(
@@ -130,13 +152,13 @@ class GroupCard extends ConsumerWidget {
                           ),
                           AppSizes.xxxs.pw,
                           Text(
-                            "$memberCount Members", 
+                            "$memberCount Members",
                             style: AppTextStyles.caption2(),
                           ),
                         ],
                       ),
                       Text(
-                        price, 
+                        price,
                         style: AppTextStyles.caption2(
                           color: AppColors.primaryOrange,
                         ),

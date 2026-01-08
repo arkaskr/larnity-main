@@ -71,6 +71,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       _buildNotificationScreenRoute(),
       _buildProfileSettingsScreenRoute(),
       _buildAuthScreenRoute(),
+      _buildGroupScreenRoute(),
+      // MOVED: All settings routes are now top-level routes
+      _buildSubscriptionSettingsScreenRoute(),
+      _buildPaymentSettingsScreenRoute(),
+      _buildOfferSettingsScreenRoute(),
+      _buildChallengeSettingsScreenRoute(),
+      _buildIntegrationSettingsScreenRoute(),
+      _buildPromoCodeSettingsScreenRoute(),
+      _buildMemberManagementSettingsScreenRoute(),
+      _buildLeaveReasonsSettingsScreenRoute(),
+      _buildManagerSettingsScreenRoute(),
     ],
   );
 });
@@ -99,8 +110,13 @@ StatefulShellRoute _buildGroupShellRoutes() {
       return GroupNavBar(navigationShell: navigationShell);
     },
     branches: [
-      StatefulShellBranch(routes: [_buildGroupScreenRoute()]),
+      // ❌ REMOVE THIS - don't include group route here
+      // StatefulShellBranch(routes: [_buildGroupScreenRoute()]),
+
+      // Branch 0 → General Settings
       StatefulShellBranch(routes: [_buildGeneralSettingsScreenRoute()]),
+
+      // Branch 1 → Chat
       StatefulShellBranch(routes: [_buildChattingScreenRoute()]),
     ],
   );
@@ -119,9 +135,46 @@ StatefulShellRoute _buildExploreShellRoutes() {
       StatefulShellBranch(routes: [_buildGroupDetailsScreenRoute()]),
       StatefulShellBranch(routes: [_buildChoosePlanScreenRoute()]),
       StatefulShellBranch(routes: [_buildPaymentScreenRoute()]),
+      // ❌ REMOVE THIS LINE - This is causing the error
+      // StatefulShellBranch(routes: [_buildGroupScreenRoute()]),
     ],
   );
 }
+
+// StatefulShellRoute _buildGroupShellRoutes() {
+//   return StatefulShellRoute.indexedStack(
+//     builder: (context, state, navigationShell) {
+//       return GroupNavBar(navigationShell: navigationShell);
+//     },
+//     branches: [
+//       // Branch 0 → Group Home
+//       StatefulShellBranch(routes: [_buildGroupScreenRoute()]),
+
+//       // Branch 1 → General Settings (keep one in branch for tab navigation)
+//       StatefulShellBranch(routes: [_buildGeneralSettingsScreenRoute()]),
+
+//       // Branch 2 → Chat
+//       StatefulShellBranch(routes: [_buildChattingScreenRoute()]),
+//     ],
+//   );
+// }
+
+// StatefulShellRoute _buildExploreShellRoutes() {
+//   return StatefulShellRoute.indexedStack(
+//     builder: (context, state, navigationShell) {
+//       return ExploreNestedRoute(navigationShell: navigationShell);
+//     },
+//     branches: [
+//       StatefulShellBranch(routes: [_buildExploreScreenRoute()]),
+//       StatefulShellBranch(routes: [_buildPackageSubscriptionScreenRoute()]),
+//       StatefulShellBranch(routes: [_buildPackageScreenRoute()]),
+//       StatefulShellBranch(routes: [_buildPackageDetailsScreenRoute()]),
+//       StatefulShellBranch(routes: [_buildGroupDetailsScreenRoute()]),
+//       StatefulShellBranch(routes: [_buildChoosePlanScreenRoute()]),
+//       StatefulShellBranch(routes: [_buildPaymentScreenRoute()]),
+//     ],
+//   );
+// }
 
 GoRoute _buildExploreScreenRoute() => GoRoute(
   name: Routes.explore,
@@ -172,14 +225,23 @@ GoRoute _buildGroupDetailsScreenRoute() => GoRoute(
   ),
 );
 
+// GoRoute _buildGroupScreenRoute() => GoRoute(
+//   name: Routes.group,
+//   path: Routes.group.p,
+//   pageBuilder: _getDefaultPageBuilderByPlatform(
+//     childBuilder: (_, state) => GroupHomeScreen(),
+//   ),
+// );
 GoRoute _buildGroupScreenRoute() => GoRoute(
   name: Routes.group,
-  path: Routes.group.p,
+  path: '/group/:groupId', // ✅ Leading slash hatao - relative path
   pageBuilder: _getDefaultPageBuilderByPlatform(
-    childBuilder: (_, state) => GroupHomeScreen(),
+    childBuilder: (_, state) {
+      final groupId = state.pathParameters['groupId'];
+      return GroupHomeScreen(groupId: groupId);
+    },
   ),
 );
-
 GoRoute _buildGeneralSettingsScreenRoute() => GoRoute(
   name: Routes.generalSettings,
   path: Routes.generalSettings.p,

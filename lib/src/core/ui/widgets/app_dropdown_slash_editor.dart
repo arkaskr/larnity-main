@@ -1,4 +1,5 @@
 import 'dart:io' as io;
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -8,6 +9,16 @@ import 'package:path/path.dart' as path;
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class AppDropdownSlashEditor extends StatefulWidget {
+  final ValueChanged<int>? onTextLengthChanged;
+
+  final void Function(String json, String html)? onContentChanged;
+
+  const AppDropdownSlashEditor({
+    super.key,
+    this.onTextLengthChanged,
+    this.onContentChanged,
+  });
+
   @override
   _AppDropdownSlashEditorState createState() => _AppDropdownSlashEditorState();
 }
@@ -30,7 +41,7 @@ class _AppDropdownSlashEditorState extends State<AppDropdownSlashEditor> {
             final file = await io.File(
               newPath,
             ).writeAsBytes(imageBytes, flush: true);
-            return file.path;
+            return 'file://${file.path}';
           },
         ),
       ),
@@ -197,6 +208,14 @@ class _AppDropdownSlashEditorState extends State<AppDropdownSlashEditor> {
     }
 
     _hideSlashDropdown();
+    final length = _controller.document.toPlainText().trimRight().length;
+    widget.onTextLengthChanged?.call(length);
+
+    final delta = _controller.document.toDelta();
+    final json = delta.toJson().toString();
+    final html = _controller.document.toPlainText();
+
+    widget.onContentChanged?.call(json, html);
   }
 
   void _showDropdown() {
@@ -300,17 +319,34 @@ class _AppDropdownSlashEditorState extends State<AppDropdownSlashEditor> {
                 ...FlutterQuillEmbeds.editorBuilders(
                   imageEmbedConfig: QuillEditorImageEmbedConfig(
                     imageProviderBuilder: (context, imageUrl) {
-                      // https://pub.dev/packages/flutter_quill_extensions#-image-assets
+                      // Handle asset images
                       if (imageUrl.startsWith('assets/')) {
                         return AssetImage(imageUrl);
                       }
+
+                      // Handle file:// URIs
+                      if (imageUrl.startsWith('file://')) {
+                        final filePath = imageUrl.replaceFirst('file://', '');
+                        return FileImage(File(filePath));
+                      }
+
+                      // Handle absolute file paths
+                      if (imageUrl.startsWith('/')) {
+                        return FileImage(File(imageUrl));
+                      }
+
+                      // 🔥 OLD DATA FIX: If it's just a filename, ignore it
+                      if (!imageUrl.startsWith('http') &&
+                          !imageUrl.contains('/')) {
+                        return null; // This will fail gracefully and show error icon
+                      }
+
+                      // For http/https URLs, return null to use default NetworkImage
                       return null;
                     },
                   ),
                   videoEmbedConfig: QuillEditorVideoEmbedConfig(
                     customVideoBuilder: (videoUrl, readOnly) {
-                      // Example: Check for YouTube Video URL and return your
-                      // YouTube video widget here.
                       bool isYouTubeUrl(String videoUrl) {
                         try {
                           final uri = Uri.parse(videoUrl);
@@ -323,17 +359,20 @@ class _AppDropdownSlashEditorState extends State<AppDropdownSlashEditor> {
                         }
                       }
 
-                      // if (isYouTubeUrl(videoUrl)) {
-                      return YoutubePlayer(
-                        controller: YoutubePlayerController(
-                          initialVideoId: "iLnmTe5Q2Qw",
-                        ),
-                        showVideoProgressIndicator: true,
-                      );
-                      // }
+                      if (isYouTubeUrl(videoUrl)) {
+                        final videoId = YoutubePlayer.convertUrlToId(videoUrl);
+                        if (videoId != null) {
+                          return YoutubePlayer(
+                            controller: YoutubePlayerController(
+                              initialVideoId: videoId,
+                            ),
+                            showVideoProgressIndicator: true,
+                          );
+                        }
+                      }
 
-                      // Return null to fallback to the default logic
-                      // return null;
+                      // Return null to fallback to default logic
+                      return null;
                     },
                   ),
                 ),

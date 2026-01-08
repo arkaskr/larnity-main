@@ -19,6 +19,17 @@ class UserModel {
     this.phoneNumber,
   });
 
+  String? get name {
+    if (firstName != null && lastName != null) {
+      return '$firstName $lastName';
+    } else if (firstName != null) {
+      return firstName;
+    } else if (lastName != null) {
+      return lastName;
+    }
+    return email; // Fallback to email if no name
+  }
+
   UserModel copyWith({
     String? id,
     String? firstName,
