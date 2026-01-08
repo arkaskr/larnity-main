@@ -114,13 +114,24 @@ class GroupDataSource {
           .from('Group')
           .select()
           .eq('privacy', 'PUBLIC')
-          .eq('active', true)
-          .eq('status', 'APPROVED')
-          .eq('isSuspended', false)
           .order('created_at', ascending: false);
 
-      final groups = response.map((data) => GroupModel.fromMap(data)).toList();
+      Log.info("🔍 Raw Response: ${response.length} groups");
+      Log.info(
+        "🔍 First group: ${response.isNotEmpty ? response.first : 'EMPTY'}",
+      );
 
+      final groups = response.map((data) {
+        try {
+          return GroupModel.fromMap(data);
+        } catch (e) {
+          Log.error("❌ Error mapping group: $e");
+          Log.error("❌ Data: $data");
+          rethrow;
+        }
+      }).toList();
+
+      Log.info("✅ Mapped ${groups.length} groups successfully");
       return Right(groups);
     } on PostgrestException catch (e) {
       Log.error("Get Public Groups Error: ${e.message}");
