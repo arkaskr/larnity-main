@@ -31,6 +31,7 @@ class GroupModel extends Equatable {
   final GroupStatus? status;
   final String? slug;
   final Map<String, dynamic>? landingSettings;
+  final String? userRole;
 
   const GroupModel({
     this.id,
@@ -59,6 +60,7 @@ class GroupModel extends Equatable {
     this.status,
     this.slug,
     this.landingSettings,
+    this.userRole,
   });
 
   GroupModel copyWith({
@@ -88,6 +90,7 @@ class GroupModel extends Equatable {
     GroupStatus? status,
     String? slug,
     Map<String, dynamic>? landingSettings,
+    String? userRole,
   }) {
     return GroupModel(
       id: id ?? this.id,
@@ -118,6 +121,7 @@ class GroupModel extends Equatable {
       status: status ?? this.status,
       slug: slug ?? this.slug,
       landingSettings: landingSettings ?? this.landingSettings,
+      userRole: userRole ?? this.userRole,
     );
   }
 
@@ -227,6 +231,7 @@ class GroupModel extends Equatable {
     status,
     slug,
     landingSettings,
+    userRole,
   ];
 
   @override

@@ -56,19 +56,49 @@ class GroupDataSource {
     }
   }
 
+  // ✅ REPLACE COMPLETE METHOD (Line 62-84)
   Future<Either<Failure, List<GroupModel>>> getGroupsByUser({
     required String userId,
   }) async {
     try {
-      final response = await supabaseClient
+      // Get groups where user is creator OR member
+      final createdGroups = await supabaseClient
           .from('Group')
           .select()
           .eq('userId', userId)
           .order('created_at', ascending: false);
 
-      final groups = response.map((data) => GroupModel.fromMap(data)).toList();
+      final memberGroups = await supabaseClient
+          .from('Members')
+          .select('''
+          role,
+          Group:groupId (*)
+        ''')
+          .eq('userId', userId)
+          .eq('isActive', true);
 
-      return Right(groups);
+      // Combine both lists
+      List<GroupModel> allGroups = [];
+
+      // Add created groups (user is owner/admin)
+      for (var data in createdGroups) {
+        final group = GroupModel.fromMap(data);
+        allGroups.add(group.copyWith(userRole: 'ADMIN'));
+      }
+
+      // Add member groups
+      for (var data in memberGroups) {
+        final role = data['role'] as String?;
+        final groupData = data['Group'] as Map<String, dynamic>;
+        final group = GroupModel.fromMap(groupData);
+
+        // Skip if already added as creator
+        if (!allGroups.any((g) => g.id == group.id)) {
+          allGroups.add(group.copyWith(userRole: role));
+        }
+      }
+
+      return Right(allGroups);
     } on PostgrestException catch (e) {
       Log.error("Get Groups by User Error: ${e.message}");
       return Left(Failure(e.message));

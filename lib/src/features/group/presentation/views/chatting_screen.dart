@@ -23,28 +23,46 @@ class ChattingScreen extends ConsumerStatefulWidget {
 class _ChattingScreenState extends ConsumerState<ChattingScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _isInitialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    Future.microtask(() {
-      final groupId = ref.read(groupProvider).group?.id;
-      if (groupId != null) {
-        ref.read(chatProvider.notifier).subscribeToMessages(groupId: groupId);
-      }
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // ✅ Initialize only once
+    if (!_isInitialized && mounted) {
+      _isInitialized = true;
+      _initializeChat();
+    }
+  }
+
+  void _initializeChat() {
+    final groupId = ref.read(groupProvider).group?.id;
+    if (groupId != null && mounted) {
+      ref.read(chatProvider.notifier).subscribeToMessages(groupId: groupId);
+    }
   }
 
   @override
   void dispose() {
+    // ✅ Proper cleanup order
     _messageController.dispose();
     _scrollController.dispose();
-    ref.read(chatProvider.notifier).unsubscribe();
+
+    // Only unsubscribe if we initialized
+    if (_isInitialized) {
+      try {
+        ref.read(chatProvider.notifier).unsubscribe();
+      } catch (e) {
+        debugPrint('Error during unsubscribe: $e');
+      }
+    }
+
     super.dispose();
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
+    if (_scrollController.hasClients && mounted) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: Duration(milliseconds: 300),

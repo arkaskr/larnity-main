@@ -13,57 +13,88 @@ final chatProvider = NotifierProvider.autoDispose<ChatNotifier, ChatState>(
 
 class ChatNotifier extends AutoDisposeNotifier<ChatState> {
   StreamSubscription? _messageSubscription;
+  bool _isDisposed = false; // ✅ ADD THIS FLAG
+  String? _currentGroupId; // ✅ Track current group
 
   @override
   ChatState build() {
     ref.onDispose(() {
+      _isDisposed = true; // ✅ Mark as disposed
       unsubscribe();
     });
     return ChatState();
   }
 
+  // ✅ FIXED: Safe state updates
+  void _updateState(ChatState Function(ChatState) update) {
+    if (!_isDisposed) {
+      state = update(state);
+    }
+  }
+
   // Subscribe to real-time messages
   void subscribeToMessages({required String groupId}) {
+    if (_isDisposed) return; // ✅ Safety check
+
+    // ✅ Prevent duplicate subscriptions
+    if (_currentGroupId == groupId && _messageSubscription != null) {
+      Log.info("Already subscribed to group: $groupId");
+      return;
+    }
+
     final supabase = ref.read(supabaseClientProvider);
 
     unsubscribe();
+    _currentGroupId = groupId; // ✅ Set current group
     _loadMessages(groupId);
     _loadMembers(groupId);
 
-    // ✅ FIXED: Use lowercase column names
     _messageSubscription = supabase
         .from('Message')
         .stream(primaryKey: ['id'])
-        .eq('recieverId', groupId) // ✅ lowercase
+        .eq('recieverId', groupId)
         .order('created_at')
-        .listen((List<Map<String, dynamic>> data) {
-          try {
-            final messages = data.map((m) => MessageModel.fromMap(m)).toList();
-            state = state.copyWith(messages: messages);
-          } catch (e) {
-            Log.error("Error processing message stream: $e");
-          }
-        });
+        .listen(
+          (List<Map<String, dynamic>> data) {
+            if (_isDisposed) return; // ✅ Check before update
+
+            try {
+              final messages = data
+                  .map((m) => MessageModel.fromMap(m))
+                  .toList();
+              _updateState((s) => s.copyWith(messages: messages));
+            } catch (e) {
+              Log.error("Error processing message stream: $e");
+            }
+          },
+          onError: (error) {
+            Log.error("Stream error: $error");
+          },
+          cancelOnError: false,
+        );
 
     Log.info("Subscribed to messages for group: $groupId");
   }
 
   Future<void> _loadMessages(String groupId) async {
+    if (_isDisposed) return; // ✅ Safety check
+
     final supabase = ref.read(supabaseClientProvider);
 
     try {
-      // ✅ FIXED: Use lowercase column name
       final response = await supabase
           .from('Message')
           .select()
-          .eq('recieverId', groupId) // ✅ lowercase
+          .eq('recieverId', groupId)
           .order('created_at', ascending: true);
+
+      if (_isDisposed) return; // ✅ Check after async
 
       final messages = (response as List)
           .map((m) => MessageModel.fromMap(m))
           .toList();
 
-      state = state.copyWith(messages: messages);
+      _updateState((s) => s.copyWith(messages: messages));
       Log.info("Loaded ${messages.length} messages");
     } catch (e) {
       Log.error("Error loading messages: $e");
@@ -71,6 +102,8 @@ class ChatNotifier extends AutoDisposeNotifier<ChatState> {
   }
 
   Future<void> _loadMembers(String groupId) async {
+    if (_isDisposed) return; // ✅ Safety check
+
     final supabase = ref.read(supabaseClientProvider);
 
     try {
@@ -88,6 +121,8 @@ class ChatNotifier extends AutoDisposeNotifier<ChatState> {
           .eq('groupId', groupId)
           .eq('isActive', true);
 
+      if (_isDisposed) return; // ✅ Check after async
+
       final members = (response as List).map((m) {
         final userData = m['User'] as Map<String, dynamic>?;
         final firstName = userData?['firstname'] as String?;
@@ -100,18 +135,19 @@ class ChatNotifier extends AutoDisposeNotifier<ChatState> {
         return MemberModel.fromChatMap(m);
       }).toList();
 
-      state = state.copyWith(members: members);
+      _updateState((s) => s.copyWith(members: members));
       Log.info("Loaded ${members.length} members");
     } catch (e) {
       Log.error("Error loading members: $e");
     }
   }
 
-  // ✅ FIXED: Send message with correct column names
   Future<bool> sendMessage({
     required String groupId,
     required String content,
   }) async {
+    if (_isDisposed) return false; // ✅ Safety check
+
     final supabase = ref.read(supabaseClientProvider);
     final currentUser = ref.read(authProvider).user;
 
@@ -123,12 +159,11 @@ class ChatNotifier extends AutoDisposeNotifier<ChatState> {
     try {
       final messageId = Uuid().v4();
 
-      // ✅ FIXED: Use lowercase column names matching your DB
       await supabase.from('Message').insert({
         'id': messageId,
-        'senderid': currentUser.id, // ✅ lowercase
-        'recieverId': groupId, // ✅ lowercase
-        'message': content, // ✅ 'message' not 'content'
+        'senderid': currentUser.id,
+        'recieverId': groupId,
+        'message': content,
         'created_at': DateTime.now().toIso8601String(),
       });
 
@@ -141,6 +176,8 @@ class ChatNotifier extends AutoDisposeNotifier<ChatState> {
   }
 
   Future<bool> deleteMessage({required String messageId}) async {
+    if (_isDisposed) return false; // ✅ Safety check
+
     final supabase = ref.read(supabaseClientProvider);
 
     try {
@@ -156,6 +193,7 @@ class ChatNotifier extends AutoDisposeNotifier<ChatState> {
   void unsubscribe() {
     _messageSubscription?.cancel();
     _messageSubscription = null;
+    _currentGroupId = null; // ✅ Clear group ID
     Log.info("Unsubscribed from messages");
   }
 }

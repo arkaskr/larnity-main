@@ -411,7 +411,14 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
   }
 
   void setSelectedGroup(GroupModel? group) {
-    state = state.copyWith(group: group);
+    // ✅ PERMANENT FIX: Safely update state
+    if (group != null) {
+      state = state.copyWith(group: group);
+      Log.info("Selected group: ${group.name} (${group.id})");
+    } else {
+      state = state.copyWith(group: null);
+      Log.info("Cleared selected group");
+    }
   }
 
   void selectCategory({required Category category}) {

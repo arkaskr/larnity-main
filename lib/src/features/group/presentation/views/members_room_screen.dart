@@ -6,7 +6,6 @@ import 'package:hugeicons/styles/stroke_rounded.dart';
 import 'package:larnity/src/core/constants/app_size.dart';
 import 'package:larnity/src/core/constants/app_strings.dart';
 import 'package:larnity/src/core/extensions/extensions.dart';
-import 'package:larnity/src/core/extensions/screen_size_extension.dart';
 import 'package:larnity/src/core/router/router.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
@@ -14,27 +13,34 @@ import 'package:larnity/src/core/ui/widgets/app_button.dart';
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/auth/presentation/provider/auth_provider.dart';
 import 'package:larnity/src/core/utils/async_states.dart';
-import 'package:larnity/src/features/group/data/models/group_model.dart';
 
 class MembersRoomScreen extends ConsumerWidget {
   const MembersRoomScreen({Key? key}) : super(key: key);
 
   // ✅ Separate method for start chat
   void _handleStartChat(BuildContext context, WidgetRef ref, dynamic group) {
-    // Check if context is still valid
     if (!context.mounted) return;
 
     try {
+      // ✅ Set group state first
       ref.read(groupProvider.notifier).setSelectedGroup(group);
 
-      // Small delay to ensure state is set
-      Future.microtask(() {
+      // ✅ Navigate on next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
           context.pushNamed(Routes.chatting);
         }
       });
     } catch (e) {
       debugPrint('Error in start chat: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open chat: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -315,9 +321,35 @@ class MembersRoomScreen extends ConsumerWidget {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          group.name,
-                                          style: AppTextStyles.headline3(),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              group.name,
+                                              style: AppTextStyles.headline3(),
+                                            ),
+                                            if (group.userRole != null) ...[
+                                              AppSizes.xxxs.pw,
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: _getRoleColor(
+                                                    group.userRole!,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  group.userRole!,
+                                                  style: AppTextStyles.caption2(
+                                                    color: AppColors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                         if (group.category != null)
                                           Text(
@@ -498,5 +530,19 @@ class MembersRoomScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // ✅ ADD THIS METHOD
+  Color _getRoleColor(String role) {
+    switch (role.toUpperCase()) {
+      case 'ADMIN':
+        return AppColors.primaryOrange;
+      case 'MEMBER':
+        return AppColors.green;
+      case 'MANAGER':
+        return AppColors.skyBlue;
+      default:
+        return AppColors.creamWhite;
+    }
   }
 }
