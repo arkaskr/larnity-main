@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';
 import 'package:larnity/src/core/constants/app_size.dart';
@@ -6,13 +7,44 @@ import 'package:larnity/src/core/constants/app_strings.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
+import 'package:larnity/src/features/group/presentation/provider/course_provider.dart';
+import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/presentation/widgets/create_course.dart';
+import 'package:larnity/src/core/extensions/extensions.dart';
 
-class ClassRoomScreen extends StatelessWidget {
+class ClassRoomScreen extends ConsumerStatefulWidget {
   const ClassRoomScreen({Key? key}) : super(key: key);
 
   @override
+  ConsumerState<ClassRoomScreen> createState() => _ClassRoomScreenState();
+}
+
+class _ClassRoomScreenState extends ConsumerState<ClassRoomScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Initial load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCourses();
+    });
+  }
+
+  void _loadCourses() {
+    final groupState = ref.read(groupProvider);
+    final currentGroup = groupState.group;
+
+    if (currentGroup?.id != null) {
+      ref
+          .read(courseProvider.notifier)
+          .getCoursesByGroup(groupId: currentGroup!.id!);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final courseState = ref.watch(courseProvider);
+    final courses = courseState.courses ?? [];
+
     return Padding(
       padding: const EdgeInsets.all(AppSizes.xs),
       child: Column(
@@ -28,14 +60,12 @@ class ClassRoomScreen extends StatelessWidget {
                     AppStrings.courses,
                     style: AppTextStyles.headline2(color: AppColors.white),
                   ),
-
                   Text(
-                    "0${AppStrings.coursesAvailable}",
+                    "${courses.length} ${AppStrings.coursesAvailable}",
                     style: AppTextStyles.overLine(),
                   ),
                 ],
               ),
-
               AppButton(
                 isExpanded: false,
                 onPressed: () {
@@ -51,12 +81,8 @@ class ClassRoomScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppSizes.xxxs),
                       ),
                       child: SizedBox(
-                        width:
-                            MediaQuery.of(context).size.width *
-                            0.95, // width badhi
-                        height:
-                            MediaQuery.of(context).size.height *
-                            0.65, // height kam
+                        width: MediaQuery.of(context).size.width * 0.95,
+                        height: MediaQuery.of(context).size.height * 0.65,
                         child: const CreateCourse(),
                       ),
                     ),
@@ -72,6 +98,154 @@ class ClassRoomScreen extends StatelessWidget {
                 radius: AppSizes.xxxs,
               ),
             ],
+          ),
+
+          AppSizes.sm.ph,
+
+          // Courses List
+          Expanded(
+            child: courseState.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : courses.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        HugeIcon(
+                          icon: HugeIconsStrokeRounded.book02,
+                          color: AppColors.white.withValues(alpha: 0.3),
+                          size: 80,
+                        ),
+                        AppSizes.sm.ph,
+                        Text(
+                          "No courses yet",
+                          style: AppTextStyles.headline3(
+                            color: AppColors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        AppSizes.xs.ph,
+                        Text(
+                          "Create your first course to get started",
+                          style: AppTextStyles.caption2(
+                            color: AppColors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: AppSizes.xs,
+                          mainAxisSpacing: AppSizes.xs,
+                        ),
+                    itemCount: courses.length,
+                    itemBuilder: (context, index) {
+                      final course = courses[index];
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppSizes.xs),
+                          color: AppColors.darkBgContainer,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Thumbnail
+                            ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(AppSizes.xs),
+                                topRight: Radius.circular(AppSizes.xs),
+                              ),
+                              child: course.thumbnail != null
+                                  ? Image.network(
+                                      course.thumbnail!,
+                                      height: 120,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                      height: 120,
+                                      color: AppColors.skyBlue.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      child: Center(
+                                        child: HugeIcon(
+                                          icon: HugeIconsStrokeRounded.image02,
+                                          color: AppColors.skyBlue,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+
+                            Padding(
+                              padding: const EdgeInsets.all(AppSizes.xxs),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Premium badge
+                                  if (course.isPaid)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSizes.xxs,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryOrange,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Premium',
+                                        style: AppTextStyles.caption2(
+                                          color: AppColors.white,
+                                        ),
+                                      ),
+                                    ),
+
+                                  AppSizes.xxxs.ph,
+
+                                  // Course name
+                                  Text(
+                                    course.name,
+                                    style: AppTextStyles.bodyText2(
+                                      color: AppColors.white,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+
+                                  if (course.description != null) ...[
+                                    AppSizes.xxxs.ph,
+                                    Text(
+                                      course.description!,
+                                      style: AppTextStyles.caption2(
+                                        color: AppColors.white.withValues(
+                                          alpha: 0.7,
+                                        ),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+
+                                  if (course.price != null) ...[
+                                    AppSizes.xxxs.ph,
+                                    Text(
+                                      '₹${course.price}',
+                                      style: AppTextStyles.headline3(
+                                        color: AppColors.primaryOrange,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';
 import 'package:larnity/src/core/constants/app_size.dart';
@@ -115,7 +116,8 @@ class _ChattingScreenState extends ConsumerState<ChattingScreen> {
         backgroundColor: AppColors.darkBg,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () =>
+              context.go('/group/${ref.read(groupProvider).group?.id}'),
         ),
         title: Row(
           children: [

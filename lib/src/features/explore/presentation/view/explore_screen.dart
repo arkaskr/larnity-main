@@ -154,86 +154,46 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        /// Previous
-                        GestureDetector(
-                          onTap: _currentPage > 1
-                              ? () {
-                                  setState(() {
-                                    _currentPage--;
-                                  });
-                                }
-                              : null,
-                          child: Opacity(
-                            opacity: _currentPage > 1 ? 1 : 0.4,
-                            child: _pageButton('Previous'),
-                          ),
-                        ),
-
-                        AppSizes.xs.pw,
-
-                        /// Page Numbers
-                        ...List.generate(totalPages, (index) {
-                          final page = index + 1;
-                          final isActive = page == _currentPage;
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: GestureDetector(
-                              onTap: () {
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      /// Previous
+                      GestureDetector(
+                        onTap: _currentPage > 1
+                            ? () {
                                 setState(() {
-                                  _currentPage = page;
+                                  _currentPage--;
                                 });
-                              },
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: isActive
-                                      ? AppColors.white
-                                      : AppColors.black,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: AppColors.white.withOpacity(0.2),
-                                  ),
-                                ),
-                                child: Text(
-                                  page.toString(),
-                                  style: TextStyle(
-                                    color: isActive
-                                        ? AppColors.black
-                                        : AppColors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-
-                        AppSizes.xs.pw,
-
-                        /// Next
-                        GestureDetector(
-                          onTap: _currentPage < totalPages
-                              ? () {
-                                  setState(() {
-                                    _currentPage++;
-                                  });
-                                }
-                              : null,
-                          child: Opacity(
-                            opacity: _currentPage < totalPages ? 1 : 0.4,
-                            child: _pageButton('Next'),
-                          ),
+                              }
+                            : null,
+                        child: Opacity(
+                          opacity: _currentPage > 1 ? 1 : 0.4,
+                          child: _pageButton('Previous'),
                         ),
-                      ],
-                    ),
+                      ),
+
+                      AppSizes.xs.pw,
+
+                      /// Page Numbers (max 3)
+                      ..._buildSimplePageNumbers(totalPages),
+
+                      AppSizes.xs.pw,
+
+                      /// Next
+                      GestureDetector(
+                        onTap: _currentPage < totalPages
+                            ? () {
+                                setState(() {
+                                  _currentPage++;
+                                });
+                              }
+                            : null,
+                        child: Opacity(
+                          opacity: _currentPage < totalPages ? 1 : 0.4,
+                          child: _pageButton('Next'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -241,6 +201,68 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             /// FOOTER
             const SliverToBoxAdapter(child: FooterWidget()),
           ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildSimplePageNumbers(int totalPages) {
+    List<Widget> pages = [];
+
+    if (totalPages <= 3) {
+      // Show all if 3 or less
+      for (int i = 1; i <= totalPages; i++) {
+        pages.add(_buildSinglePageButton(i));
+      }
+    } else {
+      // Show 3 pages around current
+      int start = _currentPage - 1;
+      int end = _currentPage + 1;
+
+      if (start < 1) {
+        start = 1;
+        end = 3;
+      }
+      if (end > totalPages) {
+        end = totalPages;
+        start = totalPages - 2;
+      }
+
+      for (int i = start; i <= end; i++) {
+        pages.add(_buildSinglePageButton(i));
+      }
+    }
+
+    return pages;
+  }
+
+  Widget _buildSinglePageButton(int page) {
+    final isActive = page == _currentPage;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _currentPage = page;
+          });
+        },
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.white : AppColors.black,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.white.withOpacity(0.2)),
+          ),
+          child: Text(
+            page.toString(),
+            style: TextStyle(
+              color: isActive ? AppColors.black : AppColors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );
@@ -254,6 +276,53 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         border: Border.all(color: AppColors.white.withOpacity(0.2)),
       ),
       child: Text(text, style: const TextStyle(color: AppColors.white)),
+    );
+  }
+
+  Widget _buildPageButton(int page) {
+    final isActive = page == _currentPage;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _currentPage = page;
+          });
+        },
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.white : AppColors.black,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.white.withOpacity(0.2)),
+          ),
+          child: Text(
+            page.toString(),
+            style: TextStyle(
+              color: isActive ? AppColors.black : AppColors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEllipsis() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        child: Text(
+          '...',
+          style: TextStyle(color: AppColors.white, fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 }

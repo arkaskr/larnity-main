@@ -4,17 +4,17 @@ import 'package:larnity/src/core/utils/logger.dart';
 import 'package:larnity/src/features/group/data/datasource/product_datasource.dart';
 import 'package:larnity/src/features/group/data/models/product_model.dart';
 
-final productProvider = ChangeNotifierProvider<ProductProvider>((ref) {
-  return ProductProvider(ref.watch(productDataSourceProvider));
+final serviceProvider = ChangeNotifierProvider<ServiceProvider>((ref) {
+  return ServiceProvider(ref.watch(productDataSourceProvider));
 });
 
-class ProductProvider extends ChangeNotifier {
+class ServiceProvider extends ChangeNotifier {
   final ProductDataSource _productDataSource;
 
-  ProductProvider(this._productDataSource);
+  ServiceProvider(this._productDataSource);
 
-  List<ProductModel> _products = [];
-  List<ProductModel> get products => _products;
+  List<ProductModel> _services = [];
+  List<ProductModel> get services => _services;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -22,26 +22,26 @@ class ProductProvider extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  /// Create Product
-  Future<bool> createProduct(ProductModel product) async {
+  /// Create Service
+  Future<bool> createService(ProductModel service) async {
     try {
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
 
-      final result = await _productDataSource.createProduct(product: product);
+      final result = await _productDataSource.createProduct(product: service);
 
       return result.fold(
         (failure) {
-          Log.error("Create Product Failed: ${failure.message}");
+          Log.error("Create Service Failed: ${failure.message}");
           _isLoading = false;
           _errorMessage = failure.message;
           notifyListeners();
           return false;
         },
-        (createdProduct) async {
-          Log.info("Product created successfully: ${createdProduct.id}");
-          await fetchProducts(product.groupId);
+        (createdService) async {
+          Log.info("Service created successfully: ${createdService.id}");
+          await fetchServices(service.groupId);
           _isLoading = false;
           notifyListeners();
           return true;
@@ -55,8 +55,8 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetch Products by Group (filter by type = PRODUCT)
-  Future<void> fetchProducts(String groupId) async {
+  /// Fetch Services by Group (filter by type = SERVICE)
+  Future<void> fetchServices(String groupId) async {
     try {
       _isLoading = true;
       _errorMessage = null;
@@ -68,15 +68,15 @@ class ProductProvider extends ChangeNotifier {
 
       result.fold(
         (failure) {
-          Log.error("Fetch Products Failed: ${failure.message}");
+          Log.error("Fetch Services Failed: ${failure.message}");
           _isLoading = false;
           _errorMessage = failure.message;
           notifyListeners();
         },
         (products) {
-          // Filter only products
-          _products = products
-              .where((item) => item.type == ProductType.product)
+          // Filter only services
+          _services = products
+              .where((item) => item.type == ProductType.service)
               .toList();
           _isLoading = false;
           notifyListeners();
@@ -89,26 +89,26 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  /// Update Product
-  Future<bool> updateProduct(ProductModel product) async {
+  /// Update Service
+  Future<bool> updateService(ProductModel service) async {
     try {
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
 
-      final result = await _productDataSource.updateProduct(product: product);
+      final result = await _productDataSource.updateProduct(product: service);
 
       return result.fold(
         (failure) {
-          Log.error("Update Product Failed: ${failure.message}");
+          Log.error("Update Service Failed: ${failure.message}");
           _isLoading = false;
           _errorMessage = failure.message;
           notifyListeners();
           return false;
         },
-        (updatedProduct) async {
-          Log.info("Product updated successfully: ${updatedProduct.id}");
-          await fetchProducts(product.groupId);
+        (updatedService) async {
+          Log.info("Service updated successfully: ${updatedService.id}");
+          await fetchServices(service.groupId);
           _isLoading = false;
           notifyListeners();
           return true;
@@ -122,26 +122,26 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  /// Delete Product
-  Future<bool> deleteProduct(String productId, String groupId) async {
+  /// Delete Service
+  Future<bool> deleteService(String serviceId, String groupId) async {
     try {
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
 
-      final result = await _productDataSource.deleteProduct(id: productId);
+      final result = await _productDataSource.deleteProduct(id: serviceId);
 
       return result.fold(
         (failure) {
-          Log.error("Delete Product Failed: ${failure.message}");
+          Log.error("Delete Service Failed: ${failure.message}");
           _isLoading = false;
           _errorMessage = failure.message;
           notifyListeners();
           return false;
         },
         (_) async {
-          Log.info("Product deleted successfully");
-          await fetchProducts(groupId);
+          Log.info("Service deleted successfully");
+          await fetchServices(groupId);
           _isLoading = false;
           notifyListeners();
           return true;

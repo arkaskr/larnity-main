@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';
@@ -12,25 +13,41 @@ import 'package:larnity/src/core/router/router.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_dropdown.dart';
+import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 
-class ExploreNestedRoute extends StatelessWidget {
-  ExploreNestedRoute({Key? key, required this.navigationShell})
+class ExploreNestedRoute extends ConsumerStatefulWidget {
+  const ExploreNestedRoute({Key? key, required this.navigationShell})
     : super(key: key ?? const ValueKey('exploreNestedRoute'));
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<ExploreNestedRoute> createState() => _ExploreNestedRouteState();
+}
+
+class _ExploreNestedRouteState extends ConsumerState<ExploreNestedRoute> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
   final AppDropdownController _larnityDropdownController =
       AppDropdownController();
 
   void _goBranch(int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final groupState = ref.watch(groupProvider);
+    final userGroups =
+        groupState.groups?.where((group) {
+          // User is creator OR has userRole (means is member)
+          return group.userRole != null;
+        }).toList() ??
+        [];
+    print("🔍 Total groups: ${userGroups.length}");
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -47,7 +64,6 @@ class ExploreNestedRoute extends StatelessWidget {
         actions: [
           GestureDetector(
             onTap: () {
-              // Navigate to notification screen when icon is tapped
               context.pushNamed(Routes.notification);
             },
             child: AppDropdown(
@@ -145,7 +161,7 @@ class ExploreNestedRoute extends StatelessWidget {
                       ),
                     ],
                   ),
-                  overlayHeight: 1 * 70 + 120,
+                  overlayHeight: (userGroups.length * 70) + 120,
                   overlayRadius: AppSizes.xs,
                   top: Padding(
                     padding: const EdgeInsets.all(AppSizes.sm),
@@ -162,6 +178,7 @@ class ExploreNestedRoute extends StatelessWidget {
                         AppSizes.xs.ph,
                         GestureDetector(
                           onTap: () {
+                            Navigator.of(context).pop();
                             context.goNamed(Routes.explore);
                           },
                           child: Row(
@@ -173,32 +190,58 @@ class ExploreNestedRoute extends StatelessWidget {
                           ),
                         ),
                         Divider(color: AppColors.borderBrown),
-                        Divider(height: 1, color: AppColors.borderBrown),
                       ],
                     ),
                   ),
-                  items: [
-                    AppDropdownItem(
-                      value: 'sifat',
+                  items: userGroups.map((group) {
+                    return AppDropdownItem(
+                      value: group.id ?? '',
+                      height: 60,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
                           _larnityDropdownController.close();
-                          context.pushNamed(Routes.group);
+                          Navigator.of(context).pop(); // Close drawer
+
+                          // Set selected group
+                          ref
+                              .read(groupProvider.notifier)
+                              .setSelectedGroup(group);
+
+                          // ✅ Navigate directly to GroupHomeScreen
+                          context.pushNamed(
+                            Routes.group,
+                            pathParameters: {'groupId': group.id ?? ''},
+                          );
                         },
                         child: Row(
                           children: [
-                            HugeIcon(
-                              icon: HugeIconsStrokeRounded.user,
-                              color: AppColors.white,
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundImage: group.thumbnail != null
+                                  ? NetworkImage(group.thumbnail!)
+                                  : null,
+                              child: group.thumbnail == null
+                                  ? HugeIcon(
+                                      icon: HugeIconsStrokeRounded.userGroup,
+                                      color: AppColors.white,
+                                      size: 20,
+                                    )
+                                  : null,
                             ),
-                            const SizedBox(width: 8),
-                            const Text("Sifat"),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                group.name,
+                                style: AppTextStyles.button(),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                    );
+                  }).toList(),
                 ),
               ),
             ),
@@ -212,67 +255,14 @@ class ExploreNestedRoute extends StatelessWidget {
                 style: AppTextStyles.button(),
               ),
               onTap: () {
-                // 1️⃣ Close drawer
                 Navigator.of(context).pop();
-
-                // 2️⃣ Redirect to Explore / Home
                 context.goNamed(Routes.explore);
-                // (or Routes.home if that’s your home route)
               },
             ),
-
-            // ListTile(
-            //   leading: HugeIcon(
-            //     icon: HugeIconsStrokeRounded.home03,
-            //     color: AppColors.white,
-            //   ),
-            //   title: const Text('Home'),
-            //   onTap: () => _goBranch(0),
-            // ),
-            // ListTile(
-            //   leading: HugeIcon(
-            //     icon: HugeIconsStrokeRounded.compass01,
-            //     color: AppColors.white,
-            //   ),
-            //   title: const Text('Explore'),
-            //   onTap: () => _goBranch(1),
-            // ),
-            // ListTile(
-            //   leading: HugeIcon(
-            //     icon: HugeIconsStrokeRounded.bookmark01,
-            //     color: AppColors.white,
-            //   ),
-            //   title: const Text('Saved'),
-            //   onTap: () => _goBranch(2),
-            // ),
-            // ListTile(
-            //   leading: HugeIcon(
-            //     icon: HugeIconsStrokeRounded.calendar01,
-            //     color: AppColors.white,
-            //   ),
-            //   title: const Text('My Learning'),
-            //   onTap: () => _goBranch(3),
-            // ),
-            // ListTile(
-            //   leading: HugeIcon(
-            //     icon: HugeIconsStrokeRounded.wallet01,
-            //     color: AppColors.white,
-            //   ),
-            //   title: const Text('Wallet'),
-            //   onTap: () => _goBranch(4),
-            // ),
-            // ListTile(
-            //   leading: HugeIcon(
-            //     icon: HugeIconsStrokeRounded.settings01,
-            //     color: AppColors.white,
-            //   ),
-            //   title: const Text('Settings'),
-            //   onTap: () => _goBranch(5),
-            // ),
           ],
         ),
       ),
-      body: navigationShell,
+      body: widget.navigationShell,
     );
   }
 }

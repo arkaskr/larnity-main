@@ -8,9 +8,11 @@ import 'package:larnity/src/core/extensions/extensions.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
+import 'package:larnity/src/features/group/data/models/supporter_model.dart';
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/presentation/provider/supporter_provider.dart';
 import 'package:larnity/src/features/group/presentation/widgets/new_supporter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DoubtRoomScreen extends ConsumerStatefulWidget {
   const DoubtRoomScreen({Key? key}) : super(key: key);
@@ -170,101 +172,7 @@ class _DoubtRoomScreenState extends ConsumerState<DoubtRoomScreen> {
                       itemCount: supporterState.supporters.length,
                       itemBuilder: (context, index) {
                         final supporter = supporterState.supporters[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: AppSizes.xs),
-                          padding: const EdgeInsets.all(AppSizes.xs),
-                          decoration: BoxDecoration(
-                            color: AppColors.iconColor,
-                            borderRadius: BorderRadius.circular(AppSizes.xxxs),
-                            border: Border.all(
-                              color: AppColors.skyBlue.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryOrange.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  borderRadius: BorderRadius.circular(
-                                    AppSizes.xxxs,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: HugeIcon(
-                                    icon: HugeIconsStrokeRounded.user,
-                                    color: AppColors.primaryOrange,
-                                  ),
-                                ),
-                              ),
-                              AppSizes.xs.pw,
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Supporter',
-                                      style: AppTextStyles.headline4(
-                                        color: AppColors.white,
-                                      ),
-                                    ),
-                                    AppSizes.xxxs.ph,
-                                    Text(
-                                      'Phone: ${supporter.phoneNumber}',
-                                      style: AppTextStyles.overLine(),
-                                    ),
-                                    if (supporter.whatsappNumber != null)
-                                      Text(
-                                        'WhatsApp: ${supporter.whatsappNumber}',
-                                        style: AppTextStyles.overLine(),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Delete Supporter'),
-                                      content: const Text(
-                                        'Are you sure you want to delete this supporter?',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text('Delete'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-
-                                  if (confirm == true && mounted) {
-                                    await ref
-                                        .read(supporterProvider)
-                                        .deleteSupporter(
-                                          supporter.id!,
-                                          currentGroupId,
-                                        );
-                                  }
-                                },
-                                icon: HugeIcon(
-                                  icon: HugeIconsStrokeRounded.delete02,
-                                  // color: AppColors.error,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
+                        return _buildSupporterCard(supporter);
                       },
                     ),
             ),
@@ -272,5 +180,144 @@ class _DoubtRoomScreenState extends ConsumerState<DoubtRoomScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildSupporterCard(SupporterModel supporter) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSizes.xs),
+      padding: const EdgeInsets.all(AppSizes.sm),
+      decoration: BoxDecoration(
+        color: AppColors.black,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Avatar Circular
+              Container(
+                width: 55,
+                height: 55,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFE7EEF7),
+                ),
+                child: const Center(
+                  child: HugeIcon(icon: HugeIconsStrokeRounded.user, size: 26),
+                ),
+              ),
+              AppSizes.sm.pw,
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Supporter',
+                      style: AppTextStyles.headline4(color: Colors.white),
+                    ),
+                    Text(
+                      "Phone: ${supporter.phoneNumber}",
+                      style: AppTextStyles.caption2(color: Colors.white),
+                    ),
+                    if (supporter.whatsappNumber != null)
+                      Text(
+                        "WhatsApp: ${supporter.whatsappNumber}",
+                        style: AppTextStyles.caption2(color: Colors.white),
+                      ),
+                  ],
+                ),
+              ),
+
+              IconButton(
+                icon: const HugeIcon(
+                  icon: HugeIconsStrokeRounded.delete02,
+                  size: 22,
+                ),
+                onPressed: () {
+                  ref
+                      .read(supporterProvider)
+                      .deleteSupporter(supporter.id!, supporter.groupId);
+                },
+              ),
+            ],
+          ),
+
+          AppSizes.sm.ph,
+
+          // CALL BUTTON
+          _actionButton(
+            label: "Call",
+            color: const Color(0xFF0D2440),
+            icon: HugeIcon(
+              icon: HugeIconsStrokeRounded.call,
+              color: Colors.white,
+              size: 20,
+            ),
+            onTap: () => launchUrl(Uri.parse("tel:${supporter.phoneNumber}")),
+          ),
+
+          if (supporter.whatsappNumber != null) ...[
+            AppSizes.xs.ph,
+            _actionButton(
+              label: "WhatsApp",
+              color: const Color(0xFF083D24),
+              icon: HugeIcon(
+                icon: HugeIconsStrokeRounded.whatsapp,
+                color: Colors.white,
+                size: 20,
+              ),
+              onTap: () => _openWhatsapp(supporter.whatsappNumber!),
+            ),
+          ],
+
+          if (supporter.link != null) ...[
+            AppSizes.xs.ph,
+            _actionButton(
+              label: "Book Now",
+              color: const Color(0xFF463700),
+              icon: const Icon(Icons.check, size: 20, color: Color(0xFFFFD700)),
+              onTap: () => launchUrl(Uri.parse(supporter.link!)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required String label,
+    required Color color,
+    Color textColor = Colors.white,
+    Widget? icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) icon,
+            const SizedBox(width: 8),
+            Text(label, style: AppTextStyles.bodyText2(color: textColor)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openWhatsapp(String number) async {
+    final uri = Uri.parse("https://wa.me/$number");
+
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

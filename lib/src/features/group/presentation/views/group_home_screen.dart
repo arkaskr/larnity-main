@@ -64,96 +64,6 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
     super.dispose();
   }
 
-  // Method to show account popup
-  // Updated _showAccountPopup method
-  void _showAccountPopup(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return Container(
-          margin: EdgeInsets.only(
-            top: MediaQuery.of(context).size.height * 0.6,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Draggable handle
-              Container(
-                width: 40,
-                height: 4,
-                margin: EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Account header
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                width: double.infinity,
-                child: Text(
-                  'Account',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.white,
-                  ),
-                ),
-              ),
-
-              Divider(color: Colors.grey[700], height: 1),
-
-              // Profile option
-              ListTile(
-                contentPadding: EdgeInsets.symmetric(horizontal: 20),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  // Navigate to profile screen
-                  context.goNamed(Routes.profileSettings);
-                },
-                leading: Icon(Icons.person_outline, color: AppColors.white),
-                title: Text(
-                  'Profile',
-                  style: TextStyle(color: AppColors.white, fontSize: 16),
-                ),
-              ),
-
-              Divider(color: Colors.grey[700], height: 1),
-
-              // Logout option
-              ListTile(
-                contentPadding: EdgeInsets.symmetric(horizontal: 20),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  ref.read(authProvider.notifier).signOut();
-                  context.goNamed(Routes.auth);
-                },
-                leading: Icon(Icons.logout, color: AppColors.red),
-                title: Text(
-                  'Logout',
-                  style: TextStyle(color: AppColors.red, fontSize: 16),
-                ),
-              ),
-
-              // Bottom padding
-              SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final groupState = ref.watch(groupProvider);
@@ -667,7 +577,7 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
                   children: [
                     DiscussionRoomScreen(),
                     ClassRoomScreen(),
-                    LiveClassRoomScreen(),
+                    LiveClassRoomScreen(groupId: currentGroup.id!),
                     EventRoomScreen(),
                     MembersRoomScreen(),
                     DoubtRoomScreen(),
@@ -721,15 +631,73 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
               isSelected: false,
             ),
             _BuildNavItem(
-              onTap: () => _showAccountPopup(context),
-              icon: Container(
-                height: 40,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryOrange,
-                  shape: BoxShape.circle,
+              onTap: () {},
+              icon: AppDropdown(
+                overlayWidth: 140,
+                overlayHeight: 160,
+                overlayAlignment: Alignment.centerRight,
+                gapFromButton: 16,
+                top: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: AppSizes.xxxs,
+                        left: AppSizes.xs,
+                      ),
+                      child: Text(AppStrings.account),
+                    ),
+                    Divider(color: AppColors.creamWhite, thickness: 1),
+                  ],
                 ),
-                child: Icon(Icons.person, color: Colors.white),
+                button: Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryOrange,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.person, color: Colors.white),
+                ),
+                items: [
+                  AppDropdownItem(
+                    value: "settings",
+                    child: GestureDetector(
+                      onTap: () {
+                        context.pushNamed(Routes.profileSettings);
+                      },
+                      child: Row(
+                        children: [
+                          HugeIcon(
+                            icon: HugeIconsStrokeRounded.settings01,
+                            color: Colors.grey,
+                          ),
+                          AppSizes.xxxs.pw,
+                          Text("Settings"),
+                        ],
+                      ),
+                    ),
+                  ),
+                  AppDropdownItem(
+                    value: "logout",
+                    child: GestureDetector(
+                      onTap: () {
+                        ref.read(authProvider.notifier).signOut();
+                        context.goNamed(Routes.auth);
+                      },
+                      child: Row(
+                        children: [
+                          HugeIcon(
+                            icon: HugeIconsStrokeRounded.logout01,
+                            color: Colors.grey,
+                          ),
+                          AppSizes.xxxs.pw,
+                          Text("Logout"),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               isSelected: false,
             ),

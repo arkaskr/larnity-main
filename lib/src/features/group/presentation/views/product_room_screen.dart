@@ -49,6 +49,7 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
 
   Widget _buildProductCard(ProductModel product, String currentGroupId) {
     return Container(
+      margin: const EdgeInsets.only(bottom: AppSizes.xs),
       decoration: BoxDecoration(
         color: AppColors.darkBgContainer,
         borderRadius: BorderRadius.circular(AppSizes.xs),
@@ -65,12 +66,12 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
             ),
             child: Image.network(
               product.imageUrl,
-              height: 150,
+              height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
-                  height: 150,
+                  height: 200,
                   color: AppColors.primaryOrange.withValues(alpha: 0.3),
                   child: const Center(
                     child: Icon(
@@ -96,10 +97,11 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
                       child: Text(
                         product.name,
                         style: AppTextStyles.headline4(),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 8),
                     AppDropdown(
                       button: const Icon(
                         Icons.more_vert,
@@ -180,7 +182,7 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
                 Text(
                   product.description,
                   style: AppTextStyles.overLine(),
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
                 AppSizes.xs.ph,
@@ -189,34 +191,37 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     // Price
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: product.discountPrice != null
-                                ? "₹${product.discountPrice!.toStringAsFixed(0)} "
-                                : "₹${product.price.toStringAsFixed(0)} ",
-                            style: AppTextStyles.bodyText1(
-                              color: AppColors.primaryOrange,
-                            ),
-                          ),
-                          if (product.discountPrice != null)
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
                             TextSpan(
-                              text: "₹${product.price.toStringAsFixed(0)}",
-                              style:
-                                  AppTextStyles.bodyText1(
-                                    color: AppColors.creamWhite,
-                                  ).copyWith(
-                                    decoration: TextDecoration.lineThrough,
-                                    decorationColor: AppColors.creamWhite,
-                                  ),
+                              text: product.discountPrice != null
+                                  ? "₹${product.discountPrice!.toStringAsFixed(0)} "
+                                  : "₹${product.price.toStringAsFixed(0)} ",
+                              style: AppTextStyles.bodyText1(
+                                color: AppColors.primaryOrange,
+                              ),
                             ),
-                        ],
+                            if (product.discountPrice != null)
+                              TextSpan(
+                                text: "₹${product.price.toStringAsFixed(0)}",
+                                style:
+                                    AppTextStyles.bodyText1(
+                                      color: AppColors.creamWhite,
+                                    ).copyWith(
+                                      decoration: TextDecoration.lineThrough,
+                                      decorationColor: AppColors.creamWhite,
+                                    ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
 
                     // Rating
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         ...List.generate(
                           5,
@@ -225,10 +230,10 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
                             color: index < (product.rating ?? 1)
                                 ? AppColors.primaryOrange
                                 : AppColors.creamWhite.withValues(alpha: 0.3),
-                            size: 16,
+                            size: 14,
                           ),
                         ),
-                        AppSizes.xxxs.pw,
+                        const SizedBox(width: 4),
                         Text(
                           "(${product.rating ?? 1})",
                           style: AppTextStyles.overLine(
@@ -241,15 +246,18 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
                 ),
                 AppSizes.xs.ph,
 
-                AppButton(
-                  onPressed: () => _contactOnWhatsApp(product.whatsappNumber),
-                  label: AppStrings.buyNow,
-                  prefix: HugeIcon(
-                    icon: HugeIconsStrokeRounded.whatsapp,
-                    color: AppColors.black,
+                SizedBox(
+                  width: double.infinity,
+                  child: AppButton(
+                    onPressed: () => _contactOnWhatsApp(product.whatsappNumber),
+                    label: AppStrings.buyNow,
+                    prefix: HugeIcon(
+                      icon: HugeIconsStrokeRounded.whatsapp,
+                      color: AppColors.black,
+                    ),
+                    labelStyle: AppTextStyles.button(color: AppColors.black),
+                    bgColor: AppColors.primaryOrange,
                   ),
-                  labelStyle: AppTextStyles.button(color: AppColors.black),
-                  bgColor: AppColors.primaryOrange,
                 ),
               ],
             ),
@@ -272,95 +280,84 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.xs),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              AppSizes.xs.ph,
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppStrings.productRoom,
-                          style: AppTextStyles.headline2(
-                            color: AppColors.white,
-                          ),
-                        ),
-                        Text(
-                          "${productState.products.length}${AppStrings.productsAvailable ?? ' products available'}",
-                          style: AppTextStyles.overLine(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  AppButton(
-                    isExpanded: false,
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          final size = MediaQuery.of(context).size;
-                          return Dialog(
-                            insetPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 24,
-                            ),
-                            backgroundColor: AppColors.bgBlue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.xxxs,
-                              ),
-                            ),
-                            child: SizedBox(
-                              width: size.width * 0.95,
-                              height: size.height * 0.7,
-                              child: SingleChildScrollView(
-                                padding: EdgeInsets.only(
-                                  bottom: MediaQuery.of(
-                                    context,
-                                  ).viewInsets.bottom,
-                                ),
-                                child: AddProduct(groupId: currentGroupId),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                    prefix: HugeIcon(
-                      icon: HugeIconsStrokeRounded.addCircle,
-                      color: AppColors.black,
-                    ),
-                    label: AppStrings.addProduct,
-                    labelStyle: AppTextStyles.bodyText2(color: AppColors.black),
-                    bgColor: AppColors.primaryOrange,
-                    radius: AppSizes.xxxs,
-                  ),
-                ],
-              ),
-              AppSizes.xs.ph,
-
-              // Products List
-              productState.isLoading
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(AppSizes.lg),
-                        child: CircularProgressIndicator(),
+        child: Column(
+          children: [
+            AppSizes.xs.ph,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.productRoom,
+                        style: AppTextStyles.headline2(color: AppColors.white),
                       ),
-                    )
+                      Text(
+                        "${productState.products.length}${AppStrings.productsAvailable ?? ' products available'}",
+                        style: AppTextStyles.overLine(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                AppButton(
+                  isExpanded: false,
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        final size = MediaQuery.of(context).size;
+                        return Dialog(
+                          insetPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 24,
+                          ),
+                          backgroundColor: AppColors.bgBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.xxxs),
+                          ),
+                          child: SizedBox(
+                            width: size.width * 0.95,
+                            height: size.height * 0.7,
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.only(
+                                bottom: MediaQuery.of(
+                                  context,
+                                ).viewInsets.bottom,
+                              ),
+                              child: AddProduct(groupId: currentGroupId),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  prefix: HugeIcon(
+                    icon: HugeIconsStrokeRounded.addCircle,
+                    color: AppColors.black,
+                  ),
+                  label: AppStrings.addProduct,
+                  labelStyle: AppTextStyles.bodyText2(color: AppColors.black),
+                  bgColor: AppColors.primaryOrange,
+                  radius: AppSizes.xxxs,
+                ),
+              ],
+            ),
+            AppSizes.xs.ph,
+
+            // Products List - Changed to Expanded + ListView
+            Expanded(
+              child: productState.isLoading
+                  ? const Center(child: CircularProgressIndicator())
                   : productState.errorMessage != null
                   ? Center(
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'Error: ${productState.errorMessage}',
-                            // style: AppTextStyles.bodyText2(color: AppColors.error),
-                          ),
+                          Text('Error: ${productState.errorMessage}'),
                           AppSizes.xs.ph,
                           AppButton(
                             onPressed: () {
@@ -376,50 +373,38 @@ class _ProductRoomScreenState extends ConsumerState<ProductRoomScreen> {
                     )
                   : productState.products.isEmpty
                   ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSizes.lg),
-                        child: Column(
-                          children: [
-                            HugeIcon(
-                              icon: HugeIconsStrokeRounded.shoppingBag01,
-                              color: AppColors.skyBlue,
-                              size: 64,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          HugeIcon(
+                            icon: HugeIconsStrokeRounded.shoppingBag01,
+                            color: AppColors.skyBlue,
+                            size: 64,
+                          ),
+                          AppSizes.xs.ph,
+                          Text(
+                            'No products yet',
+                            style: AppTextStyles.headline4(
+                              color: AppColors.white,
                             ),
-                            AppSizes.xs.ph,
-                            Text(
-                              'No products yet',
-                              style: AppTextStyles.headline4(
-                                color: AppColors.white,
-                              ),
-                            ),
-                            AppSizes.xxxs.ph,
-                            Text(
-                              'Add your first product to get started',
-                              style: AppTextStyles.overLine(),
-                            ),
-                          ],
-                        ),
+                          ),
+                          AppSizes.xxxs.ph,
+                          Text(
+                            'Add your first product to get started',
+                            style: AppTextStyles.overLine(),
+                          ),
+                        ],
                       ),
                     )
-                  : GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: AppSizes.xs,
-                            mainAxisSpacing: AppSizes.xs,
-                            childAspectRatio: 0.65,
-                          ),
+                  : ListView.builder(
                       itemCount: productState.products.length,
                       itemBuilder: (context, index) {
                         final product = productState.products[index];
                         return _buildProductCard(product, currentGroupId);
                       },
                     ),
-              AppSizes.xs.ph,
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

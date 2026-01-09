@@ -108,18 +108,21 @@ class _CreatePostState extends ConsumerState<CreatePost> {
                 ),
               ),
               AppSizes.xs.pw,
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: AppStrings.postingIn,
-                      style: AppTextStyles.subtitle2(color: AppColors.white),
-                    ),
-                    TextSpan(
-                      text: "General",
-                      style: AppTextStyles.subtitle1(color: AppColors.white),
-                    ),
-                  ],
+              Expanded(
+                child: RichText(
+                  overflow: TextOverflow.ellipsis,
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: AppStrings.postingIn,
+                        style: AppTextStyles.subtitle2(color: AppColors.white),
+                      ),
+                      TextSpan(
+                        text: " General",
+                        style: AppTextStyles.subtitle1(color: AppColors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -171,13 +174,19 @@ class _CreatePostState extends ConsumerState<CreatePost> {
           const Divider(color: Colors.grey),
 
           /// FOOTER
+          /// FOOTER
           Row(
+            mainAxisSize: MainAxisSize.min, // ✅ Add this
             children: [
-              Text(
-                AppStrings.shareWithGroup,
-                style: AppTextStyles.subtitle2(color: Colors.grey),
+              Flexible(
+                // ✅ Change from Text to Flexible
+                child: Text(
+                  AppStrings.shareWithGroup,
+                  style: AppTextStyles.subtitle2(color: Colors.grey),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const Spacer(),
+              AppSizes.xs.pw,
               TextButton(
                 onPressed: () => context.pop(),
                 child: Text(
@@ -185,7 +194,7 @@ class _CreatePostState extends ConsumerState<CreatePost> {
                   style: AppTextStyles.subtitle2(color: Colors.grey),
                 ),
               ),
-              AppSizes.xs.pw,
+              AppSizes.xxxs.pw,
               AppButton(
                 onPressed: isLoading ? null : _handleCreatePost,
                 isExpanded: false,

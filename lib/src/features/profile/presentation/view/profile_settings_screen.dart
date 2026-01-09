@@ -1,8 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:larnity/src/core/constants/app_size.dart';
 import 'package:larnity/src/core/constants/app_strings.dart';
 import 'package:larnity/src/core/extensions/extensions.dart';
+import 'package:larnity/src/core/extensions/path_extension.dart';
+import 'package:larnity/src/core/router/router.dart';
+import 'package:larnity/src/core/service/supabase/src/supabase_provider.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
@@ -12,6 +19,7 @@ import 'package:larnity/src/features/group/data/models/country_model.dart';
 import 'package:larnity/src/features/auth/presentation/provider/auth_provider.dart';
 import 'package:larnity/src/features/profile/presentation/provider/profile_provider.dart';
 import 'package:larnity/src/features/auth/data/models/user_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileSettingsScreen extends ConsumerStatefulWidget {
   const ProfileSettingsScreen({Key? key}) : super(key: key);
@@ -33,6 +41,9 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
 
   bool _isUpdatingProfile = false;
   bool _isUpdatingPassword = false;
+
+  final ImagePicker _picker = ImagePicker();
+  XFile? _selectedImage;
 
   @override
   void initState() {
@@ -71,7 +82,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
         backgroundColor: AppColors.black,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.grey),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.go(Routes.explore.p),
         ),
         title: GestureDetector(
           onTap: () => Navigator.of(context).pop(),
@@ -133,41 +144,63 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   }
 
   Widget _buildProfileImageSection(UserModel? currentUser) {
-    // Get initials safely
     String getInitials() {
       String initials = "";
-
-      // Get first letter of first name if it exists
       if (currentUser?.firstName?.isNotEmpty == true) {
         initials += currentUser!.firstName![0];
       }
-
-      // Get first letter of last name if it exists
       if (currentUser?.lastName?.isNotEmpty == true) {
         initials += currentUser!.lastName![0];
       }
-
-      // If no initials found, use a default
       if (initials.isEmpty) {
-        initials = "U"; // User
+        initials = "U";
       }
-
       return initials.toUpperCase();
     }
 
     return Center(
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.grey[800],
-            child: Text(
-              getInitials(),
-              style: const TextStyle(
-                fontSize: 32,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+          GestureDetector(
+            onTap: _pickProfileImage,
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.grey[800],
+                  backgroundImage: _selectedImage != null
+                      ? FileImage(File(_selectedImage!.path))
+                      : (currentUser?.image != null
+                            ? NetworkImage(currentUser!.image!) as ImageProvider
+                            : null),
+                  child: (_selectedImage == null && currentUser?.image == null)
+                      ? Text(
+                          getInitials(),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : null,
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryOrange,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           AppSizes.xs.ph,
@@ -175,8 +208,133 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
             'Profile Image',
             style: AppTextStyles.bodyText2().copyWith(color: Colors.white),
           ),
+          AppSizes.xxxs.ph,
+          Text(
+            'Tap to change',
+            style: AppTextStyles.caption().copyWith(
+              color: Colors.grey[500],
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildUpdateProfileButton(UserModel? currentUser) {
+    return AppButton(
+      onPressed: _isUpdatingProfile
+          ? null
+          : () async {
+              if (currentUser == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("User not found"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              // Validate fields
+              if (firstNameCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("First name is required"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              setState(() => _isUpdatingProfile = true);
+
+              try {
+                String? imageUrl;
+
+                // ✅ Upload image if selected
+                if (_selectedImage != null) {
+                  final supabase = ref.read(supabaseClientProvider);
+                  final timestamp = DateTime.now().millisecondsSinceEpoch;
+                  final fileName = 'profile_${currentUser.id}_$timestamp.jpg';
+                  final filePath = 'profiles/$fileName';
+
+                  final bytes = await File(_selectedImage!.path).readAsBytes();
+
+                  await supabase.storage
+                      .from('images')
+                      .uploadBinary(
+                        filePath,
+                        bytes,
+                        fileOptions: const FileOptions(
+                          contentType: 'image/jpeg',
+                          upsert: true,
+                        ),
+                      );
+
+                  imageUrl = supabase.storage
+                      .from('images')
+                      .getPublicUrl(filePath);
+                }
+
+                final updatedUser = currentUser.copyWith(
+                  firstName: firstNameCtrl.text.trim(),
+                  lastName: lastNameCtrl.text.trim(),
+                  phoneNumber: phoneCtrl.text.trim(),
+                  image: imageUrl ?? currentUser.image, // ✅ Include image URL
+                );
+
+                await ref
+                    .read(profileProvider.notifier)
+                    .updateProfile(
+                      user: updatedUser,
+                      successCallBack: () {
+                        // Update auth provider with new user data
+                        ref.read(authProvider.notifier).updateUser(updatedUser);
+
+                        // Clear selected image after successful upload
+                        setState(() {
+                          _selectedImage = null;
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Profile updated successfully"),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                      failureCallBack: (error) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Error: $error"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      },
+                    );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Error uploading image: $e"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } finally {
+                if (mounted) {
+                  setState(() => _isUpdatingProfile = false);
+                }
+              }
+            },
+      label: _isUpdatingProfile ? "Updating..." : "Update Profile",
+      bgColor: _isUpdatingProfile ? Colors.grey[500]! : Colors.grey[300]!,
+      labelStyle: AppTextStyles.button().copyWith(
+        color: Colors.black,
+        fontSize: 16,
+      ),
+      radius: AppSizes.xs,
+      isExpanded: true,
+      height: 48,
     );
   }
 
@@ -228,63 +386,6 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildUpdateProfileButton(UserModel? currentUser) {
-    return AppButton(
-      onPressed: _isUpdatingProfile
-          ? null
-          : () async {
-              if (currentUser != null) {
-                setState(() => _isUpdatingProfile = true);
-
-                // Assuming UserModel has copyWith method
-                final updatedUser = currentUser.copyWith(
-                  firstName: firstNameCtrl.text.trim(),
-                  lastName: lastNameCtrl.text.trim(),
-                  phoneNumber: phoneCtrl.text.trim(),
-                );
-
-                try {
-                  // Call your profile update method
-                  // This depends on how your profileProvider is implemented
-                  await ref
-                      .read(profileProvider.notifier)
-                      .createProfile(
-                        user: updatedUser,
-                        successCallBack: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Profile updated successfully"),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        },
-                      );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Error updating profile: $e"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                } finally {
-                  if (mounted) {
-                    setState(() => _isUpdatingProfile = false);
-                  }
-                }
-              }
-            },
-      label: _isUpdatingProfile ? "Updating..." : "Update Profile",
-      bgColor: _isUpdatingProfile ? Colors.grey[500]! : Colors.grey[300]!,
-      labelStyle: AppTextStyles.button().copyWith(
-        color: Colors.black,
-        fontSize: 16,
-      ),
-      radius: AppSizes.xs,
-      isExpanded: true,
-      height: 48,
     );
   }
 
@@ -395,6 +496,31 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
         ),
       ],
     );
+  }
+
+  // Add this method after initState
+  Future<void> _pickProfileImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to pick image: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildPasswordField({

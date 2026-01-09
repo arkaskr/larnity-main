@@ -18,7 +18,6 @@ class ProfileNotifier extends Notifier<ProfileState> {
     void Function()? successCallBack,
     void Function()? failureCallBack,
   }) async {
-
     final dataSource = ref.read(profileDataSourceProvider);
 
     state = state.copyWith(state: AsyncState.loading);
@@ -26,18 +25,42 @@ class ProfileNotifier extends Notifier<ProfileState> {
     final response = await dataSource.createProfile(user: user);
 
     response.fold(
-          (failure) {
+      (failure) {
         state = state.copyWith(
           state: AsyncState.failure,
           error: failure.message,
         );
         failureCallBack?.call();
       },
-          (user) {
+      (user) {
+        state = state.copyWith(state: AsyncState.success, user: user);
+        successCallBack?.call();
+      },
+    );
+  }
+
+  // profile_provider.dart - Add this method
+  Future<void> updateProfile({
+    required UserModel user,
+    void Function()? successCallBack,
+    void Function(String error)? failureCallBack,
+  }) async {
+    final dataSource = ref.read(profileDataSourceProvider);
+
+    state = state.copyWith(state: AsyncState.loading);
+
+    final response = await dataSource.updateProfile(user: user);
+
+    response.fold(
+      (failure) {
         state = state.copyWith(
-          state: AsyncState.success,
-          user: user,
+          state: AsyncState.failure,
+          error: failure.message,
         );
+        failureCallBack?.call(failure.message);
+      },
+      (user) {
+        state = state.copyWith(state: AsyncState.success, user: user);
         successCallBack?.call();
       },
     );
@@ -49,17 +72,9 @@ class ProfileState {
   final String? error;
   final UserModel? user;
 
-  const ProfileState({
-    required this.state,
-    this.error,
-    this.user,
-  });
+  const ProfileState({required this.state, this.error, this.user});
 
-  ProfileState copyWith({
-    AsyncState? state,
-    String? error,
-    UserModel? user,
-  }) {
+  ProfileState copyWith({AsyncState? state, String? error, UserModel? user}) {
     return ProfileState(
       state: state ?? this.state,
       error: error ?? this.error,

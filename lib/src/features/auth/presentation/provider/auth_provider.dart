@@ -131,6 +131,14 @@ class AuthNotifier extends Notifier<AuthState> {
     );
   }
 
+  // Add this method in AuthNotifier class (around line 235, after listenToAuthChanges)
+  void updateUser(UserModel user) {
+    state = state.copyWith(user: user);
+    Log.info(
+      "✅ User updated in auth state: ${user.firstName} ${user.lastName}",
+    );
+  }
+
   Future<void> signUpWithEmail({
     void Function()? failureCallBack,
     void Function()? successCallBack,

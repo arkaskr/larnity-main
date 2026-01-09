@@ -63,7 +63,11 @@ class _NewSupporterState extends ConsumerState<NewSupporter> {
         .createSupporter(supporter);
 
     if (success && mounted) {
+      // Refresh list
+      ref.read(supporterProvider).fetchSupporters(widget.groupId);
+
       context.pop();
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Supporter added successfully')),
       );

@@ -44,7 +44,6 @@ class ProductCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("Product Name", style: AppTextStyles.headline4()),
-
                     AppDropdown(
                       button: Icon(Icons.more_vert, color: AppColors.white),
                       overlayWidth: 160,
@@ -90,59 +89,48 @@ class ProductCard extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 AppSizes.xs.ph,
                 Text("Description", style: AppTextStyles.overLine()),
                 AppSizes.xs.ph,
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: "₹8 ",
-                            style: AppTextStyles.bodyText1(
-                              color: AppColors.primaryOrange,
+                    Flexible(
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: "₹8 ",
+                              style: AppTextStyles.bodyText1(
+                                color: AppColors.primaryOrange,
+                              ),
                             ),
-                          ),
-                          TextSpan(
-                            text: "₹10",
-                            style:
-                                AppTextStyles.bodyText1(
-                                  color: AppColors.creamWhite,
-                                ).copyWith(
-                                  decoration: TextDecoration.lineThrough,
-                                  decorationColor: AppColors.creamWhite,
-                                ),
-                          ),
-                        ],
+                            TextSpan(
+                              text: "₹10",
+                              style:
+                                  AppTextStyles.bodyText1(
+                                    color: AppColors.creamWhite,
+                                  ).copyWith(
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationColor: AppColors.creamWhite,
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        HugeIcon(
-                          icon: HugeIconsStrokeRounded.star,
-                          color: AppColors.primaryOrange,
+                        ...List.generate(
+                          5,
+                          (index) => HugeIcon(
+                            icon: HugeIconsStrokeRounded.star,
+                            color: AppColors.primaryOrange,
+                            size: 14,
+                          ),
                         ),
-                        HugeIcon(
-                          icon: HugeIconsStrokeRounded.star,
-                          color: AppColors.primaryOrange,
-                        ),
-                        HugeIcon(
-                          icon: HugeIconsStrokeRounded.star,
-                          color: AppColors.primaryOrange,
-                        ),
-                        HugeIcon(
-                          icon: HugeIconsStrokeRounded.star,
-                          color: AppColors.primaryOrange,
-                        ),
-                        HugeIcon(
-                          icon: HugeIconsStrokeRounded.star,
-                          color: AppColors.primaryOrange,
-                        ),
-
-                        AppSizes.xxxs.pw,
+                        const SizedBox(width: 2),
                         Text(
                           "(4)",
                           style: AppTextStyles.overLine(
@@ -154,7 +142,6 @@ class ProductCard extends StatelessWidget {
                   ],
                 ),
                 AppSizes.xs.ph,
-
                 AppButton(
                   onPressed: () {},
                   label: AppStrings.buyNow,

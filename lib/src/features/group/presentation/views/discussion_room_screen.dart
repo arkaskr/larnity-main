@@ -9,6 +9,7 @@ import 'package:larnity/src/core/ui/widgets/app_button.dart';
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/presentation/provider/post_provider.dart';
 import 'package:larnity/src/features/group/presentation/widgets/create_post.dart';
+import 'package:larnity/src/features/group/data/datasource/channel_datasource.dart';
 
 class DiscussionRoomScreen extends ConsumerStatefulWidget {
   const DiscussionRoomScreen({Key? key}) : super(key: key);
@@ -19,15 +20,24 @@ class DiscussionRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _DiscussionRoomScreenState extends ConsumerState<DiscussionRoomScreen> {
+  String? _channelId;
+
   @override
   void initState() {
     super.initState();
-    // Fetch posts when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final groupState = ref.read(groupProvider);
-      final channelId = groupState.group?.id;
-      if (channelId != null) {
-        ref.read(postProvider).fetchPosts(channelId);
+      final groupId = groupState.group?.id;
+      if (groupId != null) {
+        final channelId = await ref
+            .read(channelDataSourceProvider)
+            .getGeneralChannelId(groupId);
+        if (channelId != null && mounted) {
+          setState(() {
+            _channelId = channelId;
+          });
+          ref.read(postProvider).fetchPosts(channelId);
+        }
       }
     });
   }
@@ -38,8 +48,8 @@ class _DiscussionRoomScreenState extends ConsumerState<DiscussionRoomScreen> {
     final postState = ref.watch(postProvider);
     final channelId = groupState.group?.id;
 
-    if (channelId == null) {
-      return const Center(child: Text('No group selected'));
+    if (_channelId == null) {
+      return const Center(child: CircularProgressIndicator());
     }
 
     return Padding(
@@ -62,7 +72,7 @@ class _DiscussionRoomScreenState extends ConsumerState<DiscussionRoomScreen> {
                   child: SizedBox(
                     width: MediaQuery.of(context).size.width * 0.95,
                     height: MediaQuery.of(context).size.height * 0.75,
-                    child: CreatePost(channelId: channelId),
+                    child: CreatePost(channelId: _channelId!),
                   ),
                 ),
               );
@@ -111,7 +121,7 @@ class _DiscussionRoomScreenState extends ConsumerState<DiscussionRoomScreen> {
                   )
                 : RefreshIndicator(
                     onRefresh: () async {
-                      await ref.read(postProvider).fetchPosts(channelId);
+                      await ref.read(postProvider).fetchPosts(_channelId!);
                     },
                     child: ListView.builder(
                       itemCount: postState.posts.length,

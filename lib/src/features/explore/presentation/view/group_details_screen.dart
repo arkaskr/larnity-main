@@ -130,45 +130,66 @@ class GroupDetailsScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            HugeIcon(
-                              icon: selectedGroup.isPublic
-                                  ? HugeIconsStrokeRounded.globe02
-                                  : HugeIconsStrokeRounded.squareLock01,
-                              color: AppColors.creamWhite,
-                            ),
-                            AppSizes.xxxs.pw,
-                            Text(
-                              selectedGroup.isPublic ? "Public" : "Private",
-                              style: AppTextStyles.overLine(),
-                            ),
-                          ],
+                        Flexible(
+                          child: Row(
+                            children: [
+                              HugeIcon(
+                                icon: selectedGroup.isPublic
+                                    ? HugeIconsStrokeRounded.globe02
+                                    : HugeIconsStrokeRounded.squareLock01,
+                                color: AppColors.creamWhite,
+                                size: 16, // icon size reduce karo
+                              ),
+                              SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  selectedGroup.isPublic ? "Public" : "Private",
+                                  style: AppTextStyles.overLine(),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        Row(
-                          children: [
-                            HugeIcon(
-                              icon: HugeIconsStrokeRounded.userMultiple02,
-                              color: AppColors.creamWhite,
-                            ),
-                            AppSizes.xxxs.pw,
-                            Text("1 Members", style: AppTextStyles.overLine()),
-                          ],
+                        Flexible(
+                          child: Row(
+                            children: [
+                              HugeIcon(
+                                icon: HugeIconsStrokeRounded.userMultiple02,
+                                color: AppColors.creamWhite,
+                                size: 16,
+                              ),
+                              SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  "1 Members",
+                                  style: AppTextStyles.overLine(),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        Row(
-                          children: [
-                            HugeIcon(
-                              icon: HugeIconsStrokeRounded.tag01,
-                              color: AppColors.creamWhite,
-                            ),
-                            AppSizes.xxxs.pw,
-                            Text(
-                              selectedGroup.monthlyPrice != null
-                                  ? "₹${selectedGroup.monthlyPrice}"
-                                  : "Free",
-                              style: AppTextStyles.overLine(),
-                            ),
-                          ],
+                        Flexible(
+                          child: Row(
+                            children: [
+                              HugeIcon(
+                                icon: HugeIconsStrokeRounded.tag01,
+                                color: AppColors.creamWhite,
+                                size: 16,
+                              ),
+                              SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  selectedGroup.monthlyPrice != null
+                                      ? "₹${selectedGroup.monthlyPrice}"
+                                      : "Free",
+                                  style: AppTextStyles.overLine(),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -178,25 +199,63 @@ class GroupDetailsScreen extends ConsumerWidget {
                         HugeIcon(
                           icon: HugeIconsStrokeRounded.star,
                           color: AppColors.primaryOrange,
+                          size: 16, // size reduce karo
                         ),
-                        AppSizes.xxxs.pw,
-                        Text(
-                          selectedGroup.userId ?? "Unknown Creator",
-                          style: AppTextStyles.overLine(),
+                        SizedBox(width: 4),
+                        Expanded(
+                          // Yaha Expanded add karo
+                          child: Text(
+                            selectedGroup.userId ?? "Unknown Creator",
+                            style: AppTextStyles.overLine(),
+                            overflow: TextOverflow
+                                .ellipsis, // text cut ho jayega agar bada hai
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
                     AppSizes.lg.ph,
-                    if (selectedGroup.monthlyPrice != null)
-                      AppButton(
-                        onPressed: () {
-                          _showPlanSelectionSheet(context);
-                        },
-                        label: "Join from ₹${selectedGroup.monthlyPrice}",
-                        labelStyle: AppTextStyles.bodyText2(),
-                        bgColor: AppColors.white,
-                        radius: AppSizes.xxxs,
+                    //if (selectedGroup.monthlyPrice != null)
+                    AppButton(
+                      onPressed: () async {
+                        if (selectedGroup.monthlyPrice != null) {
+                          _showPlanSelectionSheet(context, ref, selectedGroup);
+                        } else {
+                          // Free join logic
+                          final success = await ref
+                              .read(groupProvider.notifier)
+                              .joinGroup(groupId: selectedGroup.id!);
+
+                          if (success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Successfully joined ${selectedGroup.name}!',
+                                ),
+                              ),
+                            );
+                          } else if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  ref.read(groupProvider).error ??
+                                      'Failed to join',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      label: selectedGroup.monthlyPrice != null
+                          ? "Join from ₹${selectedGroup.monthlyPrice}"
+                          : "Join Free",
+                      labelStyle: AppTextStyles.bodyText2(
+                        color: AppColors.black,
                       ),
+                      bgColor: AppColors.white,
+                      radius: AppSizes.xxxs,
+                    ),
                     AppSizes.xs.ph,
                     Container(
                       padding: EdgeInsets.symmetric(
@@ -274,7 +333,11 @@ Join here: $shareUrl
   }
 }
 
-void _showPlanSelectionSheet(BuildContext context) {
+void _showPlanSelectionSheet(
+  BuildContext context,
+  WidgetRef ref,
+  GroupModel group,
+) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -316,6 +379,8 @@ void _showPlanSelectionSheet(BuildContext context) {
                 Navigator.of(ctx).pop();
                 _showPaymentSheet(
                   context,
+                  ref,
+                  group,
                   planName: 'Lifetime',
                   amountINR: 999,
                 );
@@ -352,7 +417,9 @@ void _showPlanSelectionSheet(BuildContext context) {
 }
 
 void _showPaymentSheet(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref,
+  GroupModel group, {
   required String planName,
   required int amountINR,
 }) {

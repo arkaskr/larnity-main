@@ -37,6 +37,36 @@ class ProfileDataSource {
     }
   }
 
+  // profile_datasource.dart - Add this method
+  Future<Either<Failure, UserModel>> updateProfile({
+    required UserModel user,
+  }) async {
+    try {
+      final updateData = {
+        'firstname': user.firstName,
+        'lastname': user.lastName,
+        'phoneNumber': user.phoneNumber,
+      };
+
+      final response = await supabaseClient
+          .from(SupabaseTable.profiles)
+          .update(updateData)
+          .eq('id', user.id!)
+          .select()
+          .single();
+
+      Log.info("✅ Update Profile Response: ${response.toString()}");
+
+      return right(UserModel.fromMap(response));
+    } on PostgrestException catch (e) {
+      Log.error("❌ Update Profile Error: ${e.message}");
+      return left(Failure(e.message));
+    } catch (e) {
+      Log.error("❌ Update Profile Error: ${e.toString()}");
+      return left(Failure(e.toString()));
+    }
+  }
+
   @override
   Future<Either<Failure, UserModel>> getUser({required String id}) async {
     try {

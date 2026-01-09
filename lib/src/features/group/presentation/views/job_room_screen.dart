@@ -71,12 +71,12 @@ class _JobRoomScreenState extends ConsumerState<JobRoomScreen> {
             ),
             child: Image.network(
               job.image,
-              height: 150,
+              height: 100, // 150 se 100 kar do
               width: double.infinity,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
-                  height: 150,
+                  height: 100, // Yaha bhi 100
                   color: AppColors.primaryOrange.withValues(alpha: 0.3),
                   child: const Center(
                     child: Icon(
@@ -91,7 +91,7 @@ class _JobRoomScreenState extends ConsumerState<JobRoomScreen> {
           ),
 
           Padding(
-            padding: const EdgeInsets.all(AppSizes.xs),
+            padding: const EdgeInsets.all(AppSizes.xxxs), // xs se xxxs
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -182,15 +182,15 @@ class _JobRoomScreenState extends ConsumerState<JobRoomScreen> {
                     ),
                   ],
                 ),
-                AppSizes.xs.ph,
+                AppSizes.xxxs.ph, // xs se xxxs
 
                 Text(
                   job.description,
                   style: AppTextStyles.overLine(),
-                  maxLines: 2,
+                  maxLines: 1, // 2 se 1
                   overflow: TextOverflow.ellipsis,
                 ),
-                AppSizes.xs.ph,
+                AppSizes.xxxs.ph, // xs se xxxs
 
                 Row(
                   children: [
@@ -200,15 +200,18 @@ class _JobRoomScreenState extends ConsumerState<JobRoomScreen> {
                       size: 16,
                     ),
                     AppSizes.xxxs.pw,
-                    Text(
-                      "Closes: $formattedDate",
-                      style: AppTextStyles.overLine(
-                        color: AppColors.creamWhite,
+                    Expanded(
+                      child: Text(
+                        "Closes: $formattedDate",
+                        style: AppTextStyles.overLine(
+                          color: AppColors.creamWhite,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                AppSizes.xs.ph,
+                AppSizes.xxxs.ph, // xs se xxxs
 
                 AppButton(
                   onPressed: () => _applyToJob(job.googleSheetId),
@@ -367,20 +370,16 @@ class _JobRoomScreenState extends ConsumerState<JobRoomScreen> {
                         ),
                       ),
                     )
-                  : GridView.builder(
+                  : ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: AppSizes.xs,
-                            mainAxisSpacing: AppSizes.xs,
-                            childAspectRatio: 0.75,
-                          ),
                       itemCount: jobState.jobs.length,
                       itemBuilder: (context, index) {
                         final job = jobState.jobs[index];
-                        return _buildJobCard(job, currentGroupId);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSizes.xs),
+                          child: _buildJobCard(job, currentGroupId),
+                        );
                       },
                     ),
               AppSizes.xs.ph,
