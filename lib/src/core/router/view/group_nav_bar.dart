@@ -38,7 +38,17 @@ class GroupNavBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the group provider to get the list of groups
     final groupState = ref.watch(groupProvider);
-    final groups = groupState.groups ?? [];
+    // final groups = groupState.groups ?? [];
+
+    final allGroups = groupState.groups ?? [];
+
+    final createdByMeGroups = allGroups
+        .where((g) => g.userRole == 'ADMIN')
+        .toList();
+
+    final memberOnlyGroups = allGroups
+        .where((g) => g.userRole == 'MEMBER')
+        .toList();
 
     return Scaffold(
       key: _scaffoldKey,
@@ -105,23 +115,57 @@ class GroupNavBar extends ConsumerWidget {
                       ),
                       Divider(color: AppColors.borderBrown),
                       AppSizes.xs.ph,
-                      GestureDetector(
-                        onTap: () {
-                          context.goNamed(Routes.explore);
-                        },
-                        child: Row(
-                          children: [
-                            Icon(Icons.explore_outlined, color: Colors.grey),
-                            8.pw,
-                            Text("Explore Groups"),
-                          ],
-                        ),
+                      Text(
+                        "Your Groups",
+                        style: AppTextStyles.overLine(color: AppColors.white),
                       ),
+                      AppSizes.xs.ph,
+
+                      ...createdByMeGroups.map((group) {
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            ref
+                                .read(groupProvider.notifier)
+                                .setSelectedGroup(group);
+                            context.pushNamed(Routes.group);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSizes.xxs,
+                            ),
+                            child: Row(
+                              children: [
+                                group.icon != null
+                                    ? SmartImage(
+                                        group.icon,
+                                        width: 18,
+                                        height: 18,
+                                      )
+                                    : HugeIcon(
+                                        icon: HugeIconsStrokeRounded.crown,
+                                        color: AppColors.primaryOrange,
+                                        size: 18,
+                                      ),
+                                8.pw,
+                                Expanded(
+                                  child: Text(
+                                    group.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+
                       Divider(color: AppColors.borderBrown),
                     ],
                   ),
                 ),
-                items: groups.map((group) {
+                items: memberOnlyGroups.map((group) {
                   return AppDropdownItem(
                     value: group.id,
                     child: GestureDetector(

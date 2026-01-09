@@ -43,6 +43,11 @@ class PackageSubscriptionDataSource {
   Future<Either<Failure, PackageSubscriptionModel?>>
   getActiveSubscriptionByUser({required String userId}) async {
     try {
+      // ✅ Validation
+      if (userId.isEmpty) {
+        return const Right(null);
+      }
+
       final response = await supabaseClient
           .from('PackageSubscriptions')
           .select()

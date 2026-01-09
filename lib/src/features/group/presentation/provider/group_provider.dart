@@ -27,14 +27,14 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
     ref.listen(authProvider, (_, next) {
       final userId = next.user?.id;
       if (userId != null && userId.isNotEmpty) {
-        getExploreGroups(userId: userId); // ✅ Changed
+        getExploreGroups(userId: userId);
       }
     });
 
     Future.microtask(() async {
       final userId = ref.watch(authProvider).user?.id ?? "";
       if (userId.isNotEmpty) {
-        await getExploreGroups(userId: userId); // ✅ Changed
+        await getExploreGroups(userId: userId);
       }
     });
 
@@ -47,6 +47,31 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
     });
 
     return GroupState(fetchState: AsyncState.initial);
+  }
+
+  // ✅ NEW METHOD: Check if current user is a member of the selected group
+  Future<void> checkMembershipStatus() async {
+    final userId = ref.read(authProvider).user?.id;
+    final groupId = state.group?.id;
+
+    if (userId == null || groupId == null) {
+      state = state.copyWith(isCurrentUserMember: false);
+      return;
+    }
+
+    final dataSource = ref.read(groupDataSourceProvider);
+    final result = await dataSource.isMember(userId: userId, groupId: groupId);
+
+    result.fold(
+      (failure) {
+        Log.error("❌ Error checking membership: ${failure.message}");
+        state = state.copyWith(isCurrentUserMember: false);
+      },
+      (isMember) {
+        Log.info("✅ Membership status: $isMember");
+        state = state.copyWith(isCurrentUserMember: isMember);
+      },
+    );
   }
 
   // Pick thumbnail image
@@ -69,7 +94,6 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
     }
   }
 
-  // Upload thumbnail to Supabase Storage and update group
   // Upload thumbnail to Supabase Storage and update group
   Future<void> updateGroupThumbnail({
     required String groupId,
@@ -117,10 +141,8 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
 
       // Update group with new thumbnail URL
       final updatedGroup = state.group!.copyWith(thumbnail: publicUrl);
-      Log.info(
-        "🔍 Updated group thumbnail: ${updatedGroup.thumbnail}",
-      ); // ✅ ADD
-      Log.info("🔍 Updated group toMap: ${updatedGroup.toMap()}"); // ✅ ADD
+      Log.info("🔍 Updated group thumbnail: ${updatedGroup.thumbnail}");
+      Log.info("🔍 Updated group toMap: ${updatedGroup.toMap()}");
 
       final response = await dataSource.updateGroup(group: updatedGroup);
 
@@ -199,7 +221,10 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
         return false;
       },
       (_) {
-        state = state.copyWith(updateState: AsyncState.success);
+        state = state.copyWith(
+          updateState: AsyncState.success,
+          isCurrentUserMember: true, // ✅ Update membership status
+        );
         Log.info("✅ Successfully joined group $groupId");
         return true;
       },
@@ -411,10 +436,11 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
   }
 
   void setSelectedGroup(GroupModel? group) {
-    // ✅ PERMANENT FIX: Safely update state
     if (group != null) {
       state = state.copyWith(group: group);
       Log.info("Selected group: ${group.name} (${group.id})");
+      // ✅ Check membership when group is selected
+      checkMembershipStatus();
     } else {
       state = state.copyWith(group: null);
       Log.info("Cleared selected group");
@@ -450,6 +476,7 @@ class GroupState {
   final XFile? selectedThumbnail;
   final List<MemberModel>? groupMembers;
   final String? currentUserRole;
+  final bool isCurrentUserMember; // ✅ NEW FIELD
 
   GroupState({
     this.fetchState,
@@ -464,6 +491,7 @@ class GroupState {
     this.selectedThumbnail,
     this.groupMembers,
     this.currentUserRole,
+    this.isCurrentUserMember = false, // ✅ DEFAULT TO FALSE
   });
 
   GroupState copyWith({
@@ -477,10 +505,11 @@ class GroupState {
     Category? selectedCategory,
     int? selectedTabIndex,
     XFile? selectedThumbnail,
-    List<MemberModel>? groupMembers, // ✅ ADD THIS
+    List<MemberModel>? groupMembers,
     bool clearThumbnail = false,
-    bool clearMembers = false, // ✅ already present
+    bool clearMembers = false,
     String? currentUserRole,
+    bool? isCurrentUserMember, // ✅ NEW PARAMETER
   }) {
     return GroupState(
       fetchState: fetchState ?? this.fetchState,
@@ -495,10 +524,10 @@ class GroupState {
       selectedThumbnail: clearThumbnail
           ? null
           : (selectedThumbnail ?? this.selectedThumbnail),
-      groupMembers: clearMembers
-          ? null
-          : (groupMembers ?? this.groupMembers), // ✅ FIX
+      groupMembers: clearMembers ? null : (groupMembers ?? this.groupMembers),
       currentUserRole: currentUserRole ?? this.currentUserRole,
+      isCurrentUserMember:
+          isCurrentUserMember ?? this.isCurrentUserMember, // ✅ NEW
     );
   }
 

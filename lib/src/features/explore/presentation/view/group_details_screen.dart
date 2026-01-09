@@ -16,13 +16,29 @@ import 'dart:io';
 
 import 'package:share_plus/share_plus.dart';
 
-class GroupDetailsScreen extends ConsumerWidget {
+class GroupDetailsScreen extends ConsumerStatefulWidget {
   const GroupDetailsScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GroupDetailsScreen> createState() => _GroupDetailsScreenState();
+}
+
+class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // ✅ Check membership status when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(groupProvider.notifier).checkMembershipStatus();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final groupState = ref.watch(groupProvider);
     final selectedGroup = groupState.group;
+    final isAlreadyMember =
+        groupState.isCurrentUserMember; // ✅ Get membership status
 
     // If no group is selected, show loading or error state
     if (selectedGroup == null) {
@@ -138,7 +154,7 @@ class GroupDetailsScreen extends ConsumerWidget {
                                     ? HugeIconsStrokeRounded.globe02
                                     : HugeIconsStrokeRounded.squareLock01,
                                 color: AppColors.creamWhite,
-                                size: 16, // icon size reduce karo
+                                size: 16,
                               ),
                               SizedBox(width: 4),
                               Flexible(
@@ -199,61 +215,73 @@ class GroupDetailsScreen extends ConsumerWidget {
                         HugeIcon(
                           icon: HugeIconsStrokeRounded.star,
                           color: AppColors.primaryOrange,
-                          size: 16, // size reduce karo
+                          size: 16,
                         ),
                         SizedBox(width: 4),
                         Expanded(
-                          // Yaha Expanded add karo
                           child: Text(
                             selectedGroup.userId ?? "Unknown Creator",
                             style: AppTextStyles.overLine(),
-                            overflow: TextOverflow
-                                .ellipsis, // text cut ho jayega agar bada hai
+                            overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                           ),
                         ),
                       ],
                     ),
                     AppSizes.lg.ph,
-                    //if (selectedGroup.monthlyPrice != null)
+                    // ✅ UPDATED JOIN BUTTON WITH DISABLED STATE
                     AppButton(
-                      onPressed: () async {
-                        if (selectedGroup.monthlyPrice != null) {
-                          _showPlanSelectionSheet(context, ref, selectedGroup);
-                        } else {
-                          // Free join logic
-                          final success = await ref
-                              .read(groupProvider.notifier)
-                              .joinGroup(groupId: selectedGroup.id!);
+                      onPressed: isAlreadyMember
+                          ? null // ✅ Disable button if already a member
+                          : () async {
+                              if (selectedGroup.monthlyPrice != null) {
+                                _showPlanSelectionSheet(
+                                  context,
+                                  ref,
+                                  selectedGroup,
+                                );
+                              } else {
+                                // Free join logic
+                                final success = await ref
+                                    .read(groupProvider.notifier)
+                                    .joinGroup(groupId: selectedGroup.id!);
 
-                          if (success && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Successfully joined ${selectedGroup.name}!',
-                                ),
-                              ),
-                            );
-                          } else if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  ref.read(groupProvider).error ??
-                                      'Failed to join',
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      label: selectedGroup.monthlyPrice != null
+                                if (success && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Successfully joined ${selectedGroup.name}!',
+                                      ),
+                                    ),
+                                  );
+                                } else if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        ref.read(groupProvider).error ??
+                                            'Failed to join',
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      label: isAlreadyMember
+                          ? "Already a Member" // ✅ Change button text
+                          : selectedGroup.monthlyPrice != null
                           ? "Join from ₹${selectedGroup.monthlyPrice}"
                           : "Join Free",
                       labelStyle: AppTextStyles.bodyText2(
-                        color: AppColors.black,
+                        color: isAlreadyMember
+                            ? AppColors
+                                  .creamWhite // ✅ Different text color for disabled
+                            : AppColors.black,
                       ),
-                      bgColor: AppColors.white,
+                      bgColor: isAlreadyMember
+                          ? AppColors
+                                .darkBgContainer // ✅ Different bg color for disabled
+                          : AppColors.white,
                       radius: AppSizes.xxxs,
                     ),
                     AppSizes.xs.ph,
