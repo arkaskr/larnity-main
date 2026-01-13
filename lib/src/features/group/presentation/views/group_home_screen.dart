@@ -44,6 +44,7 @@ class GroupHomeScreen extends ConsumerStatefulWidget {
 class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
   final PageController groupPageController = PageController();
   bool _showOnboardingBanner = true;
+  final AppDropdownController _groupDropdownController = AppDropdownController();
 
   @override
   void initState() {
@@ -69,6 +70,15 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
     final groupState = ref.watch(groupProvider);
     final currentGroup = groupState.group;
     final groups = groupState.groups ?? [];
+
+    // Get all groups where user has a role (ADMIN or MEMBER)
+    final userGroups = groups
+        .where((group) => group.userRole != null)
+        .toList();
+
+    // Calculate max overlay height (60% of screen height, but max 500)
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxOverlayHeight = (screenHeight * 0.6).clamp(200.0, 500.0);
 
     // Show loading while fetching
     if (groupState.fetchState == AsyncState.loading) {
@@ -113,317 +123,338 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
         ],
       ),
       endDrawer: Drawer(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSizes.xs),
-          child: Column(
-            children: [
-              AppSizes.xxxlg.ph,
-              // Group Selector Dropdown
-              AppDropdown(
-                button: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.xxxs,
-                    vertical: AppSizes.xxxs,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: AppColors.skyBlue.withValues(alpha: 0.5),
-                    ),
-                    borderRadius: BorderRadius.circular(AppSizes.xs),
-                  ),
-                  child: Row(
+        child: ListView(
+          children: [
+            DrawerHeader(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.xlg),
+                child: AppDropdown(
+                  controller: _groupDropdownController,
+                  button: Row(
                     children: [
+                      Expanded(child: Image.asset(AppAssets.images.logoWhite)),
                       AppSizes.xs.pw,
-                      Expanded(
-                        child: Text(
-                          currentGroup.name,
-                          style: AppTextStyles.overLine(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Spacer(),
                       HugeIcon(
-                        icon: HugeIconsStrokeRounded.arrowUpDown,
+                        icon: HugeIconsStrokeRounded.unfoldMore,
                         color: AppColors.white,
                       ),
                     ],
                   ),
-                ),
-                overlayHeight: 1 * 70 + 120,
-                overlayRadius: AppSizes.xs,
-                top: Padding(
-                  padding: const EdgeInsets.all(AppSizes.sm),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Groups',
-                        style: AppTextStyles.subtitle1(color: AppColors.white),
-                      ),
-                      Divider(color: AppColors.borderBrown),
-                      AppSizes.xs.ph,
-                      GestureDetector(
+                  overlayHeight: maxOverlayHeight,
+                  overlayRadius: AppSizes.xs,
+                  top: Padding(
+                    padding: const EdgeInsets.all(AppSizes.sm),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'All Groups',
+                          style: AppTextStyles.subtitle1(
+                            color: AppColors.white,
+                          ),
+                        ),
+                        Divider(color: AppColors.borderBrown),
+                        AppSizes.xs.ph,
+                        GestureDetector(
+                          onTap: () {
+                            _groupDropdownController.close();
+                            Navigator.of(context).pop(); // Close drawer
+                            context.goNamed(Routes.explore);
+                          },
+                          child: Row(
+                            children: const [
+                              Icon(Icons.explore_outlined, color: Colors.grey),
+                              SizedBox(width: 8),
+                              Text("Explore Groups"),
+                            ],
+                          ),
+                        ),
+                        Divider(color: AppColors.borderBrown),
+                      ],
+                    ),
+                  ),
+                  items: userGroups.map((group) {
+                    return AppDropdownItem(
+                      value: group.id ?? '',
+                      height: 60,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: () {
-                          context.goNamed(Routes.explore);
+                          _groupDropdownController.close();
+                          Navigator.of(context).pop(); // Close drawer
+
+                          // Set selected group
+                          ref
+                              .read(groupProvider.notifier)
+                              .setSelectedGroup(group);
+
+                          // Navigate to group
+                          context.pushNamed(
+                            Routes.group,
+                            pathParameters: {'groupId': group.id ?? ''},
+                          );
                         },
                         child: Row(
                           children: [
-                            Icon(Icons.explore_outlined, color: Colors.grey),
-                            8.pw,
-                            Text("Explore Groups"),
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundImage: group.thumbnail != null
+                                  ? NetworkImage(group.thumbnail!)
+                                  : null,
+                              child: group.thumbnail == null
+                                  ? (group.icon != null
+                                      ? SmartImage(group.icon, width: 20, height: 20)
+                                      : HugeIcon(
+                                          icon: group.userRole == 'ADMIN'
+                                              ? HugeIconsStrokeRounded.crown
+                                              : HugeIconsStrokeRounded.userGroup,
+                                          color: group.userRole == 'ADMIN'
+                                              ? AppColors.primaryOrange
+                                              : AppColors.white,
+                                          size: 20,
+                                        ))
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                group.name,
+                                style: AppTextStyles.button(),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      Divider(color: AppColors.borderBrown),
-                    ],
-                  ),
+                    );
+                  }).toList(),
                 ),
-                items: groups.map((group) {
-                  return AppDropdownItem(
-                    value: group.id,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
+              ),
+            ),
+            ListTile(
+              leading: HugeIcon(
+                icon: HugeIconsStrokeRounded.compass01,
+                color: AppColors.white,
+              ),
+              title: Text(
+                AppStrings.exploreGroups,
+                style: AppTextStyles.button(),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.goNamed(Routes.explore);
+              },
+            ),
+            // Rest of drawer content
+            Padding(
+              padding: const EdgeInsets.all(AppSizes.xs),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppSizes.xs.ph,
+                  AppButton(
+                    onPressed: () {},
+                    padding: EdgeInsets.zero,
+                    bgColor: Colors.transparent,
+                    child: Row(
+                      children: [
+                        Text(
+                          "CHANNELS",
+                          style: AppTextStyles.overLine(color: AppColors.white),
+                        ),
+                        Spacer(),
+                        Icon(Icons.add, color: AppColors.white),
+                      ],
+                    ),
+                  ),
+                  AppSizes.lg.ph,
+                  // General
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      if (currentGroup != null) {
                         ref
                             .read(groupProvider.notifier)
-                            .setSelectedGroup(group);
-                        if (group.id != null) {
-                          context.go('/group/${group.id}');
-                        }
-                      },
-                      child: Row(
-                        children: [
-                          group.icon != null
-                              ? SmartImage(
-                                  group.icon,
-                                  width: 20,
-                                  height: 20,
-                                  fit: BoxFit.contain,
-                                )
-                              : HugeIcon(
-                                  icon: HugeIconsStrokeRounded.user,
-                                  color: AppColors.white,
-                                  size: 20,
-                                ),
-                          8.pw,
-                          Text(group.name),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              AppSizes.xxxlg.ph,
-              AppButton(
-                onPressed: () {},
-                padding: EdgeInsets.zero,
-                bgColor: Colors.transparent,
-                child: Row(
-                  children: [
-                    Text(
-                      "CHANNELS",
-                      style: AppTextStyles.overLine(color: AppColors.white),
-                    ),
-                    Spacer(),
-                    Icon(Icons.add, color: AppColors.white),
-                  ],
-                ),
-              ),
-              AppSizes.lg.ph,
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // General
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          if (currentGroup != null) {
-                            ref
-                                .read(groupProvider.notifier)
-                                .setSelectedGroup(currentGroup);
-                          }
-                          context.goNamed(Routes.generalSettings);
-                        },
-                        child: Row(
-                          children: [
-                            HugeIcon(
-                              icon: HugeIconsStrokeRounded.home03,
-                              color: Colors.grey,
-                            ),
-                            8.pw,
-                            Text("General", style: AppTextStyles.button()),
-                          ],
+                            .setSelectedGroup(currentGroup);
+                      }
+                      context.goNamed(Routes.generalSettings);
+                    },
+                    child: Row(
+                      children: [
+                        HugeIcon(
+                          icon: HugeIconsStrokeRounded.home03,
+                          color: Colors.grey,
                         ),
-                      ),
-                      AppSizes.xs.ph,
+                        8.pw,
+                        Text("General", style: AppTextStyles.button()),
+                      ],
+                    ),
+                  ),
+                  AppSizes.xs.ph,
 
-                      // Announcements
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Row(
-                          children: [
-                            HugeIcon(
-                              icon: HugeIconsStrokeRounded.notification01,
-                              color: Colors.grey,
-                            ),
-                            8.pw,
-                            Text(
-                              "Announcements",
-                              style: AppTextStyles.button(),
-                            ),
-                          ],
+                  // Announcements
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Row(
+                      children: [
+                        HugeIcon(
+                          icon: HugeIconsStrokeRounded.notification01,
+                          color: Colors.grey,
                         ),
-                      ),
-                      AppSizes.xs.ph,
+                        8.pw,
+                        Text(
+                          "Announcements",
+                          style: AppTextStyles.button(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSizes.xs.ph,
 
-                      // Settings Expansion Tile
-                      Theme(
-                        data: Theme.of(
-                          context,
-                        ).copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          title: Text(
-                            "Settings",
-                            style: AppTextStyles.button(),
-                          ),
-                          tilePadding: EdgeInsets.zero,
+                  // Settings Expansion Tile
+                  Theme(
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      title: Text(
+                        "Settings",
+                        style: AppTextStyles.button(),
+                      ),
+                      tilePadding: EdgeInsets.zero,
+                      leading: HugeIcon(
+                        icon: HugeIconsStrokeRounded.settings01,
+                        color: Colors.grey,
+                      ),
+                      children: [
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            if (currentGroup != null) {
+                              ref
+                                  .read(groupProvider.notifier)
+                                  .setSelectedGroup(currentGroup);
+                            }
+                            context.pushNamed(Routes.generalSettings);
+                          },
                           leading: HugeIcon(
                             icon: HugeIconsStrokeRounded.settings01,
                             color: Colors.grey,
                           ),
-                          children: [
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                if (currentGroup != null) {
-                                  ref
-                                      .read(groupProvider.notifier)
-                                      .setSelectedGroup(currentGroup);
-                                }
-                                context.pushNamed(Routes.generalSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.settings01,
-                                color: Colors.grey,
-                              ),
-                              title: Text("General"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(Routes.subscriptionSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.wallet01,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Subscriptions"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(Routes.paymentSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.building01,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Payment Method"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(Routes.offerSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.package,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Offer"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(Routes.challengeSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.award02,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Challenge"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(Routes.integrationSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.link01,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Integration"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(Routes.promoCodeSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.ticket03,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Promo Code"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(
-                                  Routes.memberManagementSettings,
-                                );
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.man,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Member Management"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(Routes.leaveReasonsSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.userBlock02,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Leave Reason"),
-                            ),
-                            ListTile(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                context.pushNamed(Routes.managerSettings);
-                              },
-                              leading: HugeIcon(
-                                icon: HugeIconsStrokeRounded.userShield02,
-                                color: Colors.grey,
-                              ),
-                              title: Text("Manager"),
-                            ),
-                          ],
+                          title: Text("General"),
                         ),
-                      ),
-                    ],
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(Routes.subscriptionSettings);
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.wallet01,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Subscriptions"),
+                        ),
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(Routes.paymentSettings);
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.building01,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Payment Method"),
+                        ),
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(Routes.offerSettings);
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.package,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Offer"),
+                        ),
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(Routes.challengeSettings);
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.award02,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Challenge"),
+                        ),
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(Routes.integrationSettings);
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.link01,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Integration"),
+                        ),
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(Routes.promoCodeSettings);
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.ticket03,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Promo Code"),
+                        ),
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(
+                              Routes.memberManagementSettings,
+                            );
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.man,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Member Management"),
+                        ),
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(Routes.leaveReasonsSettings);
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.userBlock02,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Leave Reason"),
+                        ),
+                        ListTile(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.pushNamed(Routes.managerSettings);
+                          },
+                          leading: HugeIcon(
+                            icon: HugeIconsStrokeRounded.userShield02,
+                            color: Colors.grey,
+                          ),
+                          title: Text("Manager"),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       body: SafeArea(

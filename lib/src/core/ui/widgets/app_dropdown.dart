@@ -552,7 +552,8 @@ class _DropdownContainer<T> extends StatelessWidget {
 
     return ListView.separated(
       padding: EdgeInsets.zero,
-      shrinkWrap: true,
+      shrinkWrap: false,
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];

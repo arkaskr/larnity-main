@@ -20,35 +20,42 @@ import 'package:larnity/src/features/auth/presentation/provider/auth_provider.da
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/data/models/group_model.dart';
 
-class GroupNavBar extends ConsumerWidget {
+class GroupNavBar extends ConsumerStatefulWidget {
   GroupNavBar({Key? key, required this.navigationShell})
     : super(key: key ?? const ValueKey('ScaffoldWithNestedNavigation'));
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<GroupNavBar> createState() => _GroupNavBarState();
+}
+
+class _GroupNavBarState extends ConsumerState<GroupNavBar> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
+  final AppDropdownController _groupDropdownController = AppDropdownController();
 
   void _goBranch(int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     // Watch the group provider to get the list of groups
     final groupState = ref.watch(groupProvider);
-    // final groups = groupState.groups ?? [];
 
     final allGroups = groupState.groups ?? [];
 
-    final createdByMeGroups = allGroups
-        .where((g) => g.userRole == 'ADMIN')
+    // Get all groups where user has a role (ADMIN or MEMBER)
+    final userGroups = allGroups
+        .where((group) => group.userRole != null)
         .toList();
 
-    final memberOnlyGroups = allGroups
-        .where((g) => g.userRole == 'MEMBER')
-        .toList();
+    // Calculate max overlay height (60% of screen height, but max 500)
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxOverlayHeight = (screenHeight * 0.6).clamp(200.0, 500.0);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -71,7 +78,10 @@ class GroupNavBar extends ConsumerWidget {
           child: Column(
             children: [
               AppSizes.xxxlg.ph,
+
+              // Group selector dropdown
               AppDropdown(
+                controller: _groupDropdownController,
                 button: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSizes.xxxs,
@@ -85,6 +95,37 @@ class GroupNavBar extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
+                      AppSizes.xs.pw,
+                      // Group icon/thumbnail
+                      if (groupState.group != null)
+                        groupState.group!.thumbnail != null
+                            ? CircleAvatar(
+                                radius: 12,
+                                backgroundImage: NetworkImage(groupState.group!.thumbnail!),
+                              )
+                            : CircleAvatar(
+                                radius: 12,
+                                child: groupState.group!.icon != null
+                                    ? SmartImage(groupState.group!.icon, width: 16, height: 16)
+                                    : HugeIcon(
+                                        icon: groupState.group!.userRole == 'ADMIN'
+                                            ? HugeIconsStrokeRounded.crown
+                                            : HugeIconsStrokeRounded.userGroup,
+                                        color: groupState.group!.userRole == 'ADMIN'
+                                            ? AppColors.primaryOrange
+                                            : AppColors.white,
+                                        size: 16,
+                                      ),
+                              )
+                        else
+                          CircleAvatar(
+                            radius: 12,
+                            child: HugeIcon(
+                              icon: HugeIconsStrokeRounded.userGroup,
+                              color: AppColors.white,
+                              size: 16,
+                            ),
+                          ),
                       AppSizes.xs.pw,
                       Expanded(
                         child: Text(
@@ -102,7 +143,7 @@ class GroupNavBar extends ConsumerWidget {
                     ],
                   ),
                 ),
-                overlayHeight: 1 * 70 + 120,
+                overlayHeight: maxOverlayHeight,
                 overlayRadius: AppSizes.xs,
                 top: Padding(
                   padding: const EdgeInsets.all(AppSizes.sm),
@@ -110,98 +151,88 @@ class GroupNavBar extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Groups',
-                        style: AppTextStyles.subtitle1(color: AppColors.white),
+                        'All Groups',
+                        style: AppTextStyles.subtitle1(
+                          color: AppColors.white,
+                        ),
                       ),
                       Divider(color: AppColors.borderBrown),
                       AppSizes.xs.ph,
-                      Text(
-                        "Your Groups",
-                        style: AppTextStyles.overLine(color: AppColors.white),
+                      GestureDetector(
+                        onTap: () {
+                          _groupDropdownController.close();
+                          Navigator.of(context).pop(); // Close drawer
+                          context.pushNamed(Routes.explore);
+                        },
+                        child: Row(
+                          children: const [
+                            Icon(Icons.explore_outlined, color: Colors.grey),
+                            SizedBox(width: 8),
+                            Text("Explore Groups"),
+                          ],
+                        ),
                       ),
-                      AppSizes.xs.ph,
-
-                      ...createdByMeGroups.map((group) {
-                        return GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            ref
-                                .read(groupProvider.notifier)
-                                .setSelectedGroup(group);
-                            context.pushNamed(Routes.group);
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSizes.xxs,
-                            ),
-                            child: Row(
-                              children: [
-                                group.icon != null
-                                    ? SmartImage(
-                                        group.icon,
-                                        width: 18,
-                                        height: 18,
-                                      )
-                                    : HugeIcon(
-                                        icon: HugeIconsStrokeRounded.crown,
-                                        color: AppColors.primaryOrange,
-                                        size: 18,
-                                      ),
-                                8.pw,
-                                Expanded(
-                                  child: Text(
-                                    group.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-
                       Divider(color: AppColors.borderBrown),
                     ],
                   ),
                 ),
-                items: memberOnlyGroups.map((group) {
+                items: userGroups.map((group) {
                   return AppDropdownItem(
-                    value: group.id,
+                    value: group.id ?? '',
+                    height: 60,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () {
-                        // Set the selected group and navigate to the group screen
+                        _groupDropdownController.close();
+                        Navigator.of(context).pop(); // Close drawer
+
+                        // Set selected group
                         ref
                             .read(groupProvider.notifier)
                             .setSelectedGroup(group);
-                        context.pushNamed(Routes.group);
+
+                        // Navigate to group
+                        context.pushNamed(
+                          Routes.group,
+                          pathParameters: {'groupId': group.id ?? ''},
+                        );
                       },
                       child: Row(
                         children: [
-                          // Show group icon if available, otherwise use a default icon
-                          group.icon != null
-                              ? SmartImage(
-                                  group.icon,
-                                  width: 20,
-                                  height: 20,
-                                  fit: BoxFit.contain,
+                          group.thumbnail != null
+                              ? CircleAvatar(
+                                  radius: 16,
+                                  backgroundImage: NetworkImage(group.thumbnail!),
                                 )
-                              : HugeIcon(
-                                  icon: HugeIconsStrokeRounded.user,
-                                  color: AppColors.white,
-                                  size: 20,
+                              : CircleAvatar(
+                                  radius: 16,
+                                  child: group.icon != null
+                                      ? SmartImage(group.icon, width: 20, height: 20)
+                                      : HugeIcon(
+                                          icon: group.userRole == 'ADMIN'
+                                              ? HugeIconsStrokeRounded.crown
+                                              : HugeIconsStrokeRounded.userGroup,
+                                          color: group.userRole == 'ADMIN'
+                                              ? AppColors.primaryOrange
+                                              : AppColors.white,
+                                          size: 20,
+                                        ),
                                 ),
-
-                          8.pw,
-                          // Show group name
-                          Text(group.name),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              group.name,
+                              style: AppTextStyles.button(),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   );
                 }).toList(),
               ),
+
               AppSizes.xxxlg.ph,
               AppButton(
                 onPressed: () {},
@@ -386,7 +417,7 @@ class GroupNavBar extends ConsumerWidget {
           ),
         ),
       ),
-      body: navigationShell,
+      body: widget.navigationShell,
       bottomNavigationBar: BottomAppBar(
         height: 60,
         color: Theme.of(context).colorScheme.surface,
@@ -408,7 +439,7 @@ class GroupNavBar extends ConsumerWidget {
                 icon: HugeIconsStrokeRounded.home03,
                 color: Colors.grey,
               ),
-              isSelected: navigationShell.currentIndex == 0,
+              isSelected: widget.navigationShell.currentIndex == 0,
             ),
             _BuildNavItem(
               onTap: () {},
@@ -485,7 +516,7 @@ class GroupNavBar extends ConsumerWidget {
                 ),
                 items: [],
               ),
-              isSelected: navigationShell.currentIndex == 1,
+              isSelected: widget.navigationShell.currentIndex == 1,
             ),
             _BuildNavItem(
               onTap: () => _goBranch(1),
@@ -493,7 +524,7 @@ class GroupNavBar extends ConsumerWidget {
                 icon: HugeIconsStrokeRounded.message02,
                 color: Colors.grey,
               ),
-              isSelected: navigationShell.currentIndex == 1,
+              isSelected: widget.navigationShell.currentIndex == 1,
             ),
             _BuildNavItem(
               onTap: () {},
@@ -590,45 +621,6 @@ class _BuildNavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Flexible(
       child: InkWell(onTap: onTap, child: icon),
-      // IconButton(
-      //   onPressed: onTap,
-      //   style: ButtonStyle(visualDensity: VisualDensity.compact),
-      //   icon: isSelected
-      //       ? Column(
-      //           children: [
-      //             selectedIcon,
-      //             Text(
-      //               label,
-      //               style: TextStyle(
-      //                 color: isSelected
-      //                     ? AppColors.primaryOrange
-      //                     : AppColors.gray,
-      //                 fontSize: 8,
-      //                 fontWeight: isSelected
-      //                     ? FontWeight.bold
-      //                     : FontWeight.normal,
-      //               ),
-      //             ),
-      //           ],
-      //         )
-      //       : Column(
-      //           children: [
-      //             icon,
-      //             Text(
-      //               label,
-      //               style: TextStyle(
-      //                 color: isSelected
-      //                     ? AppColors.primaryOrange
-      //                     : AppColors.gray,
-      //                 fontSize: 8,
-      //                 fontWeight: isSelected
-      //                     ? FontWeight.bold
-      //                     : FontWeight.normal,
-      //               ),
-      //             ),
-      //           ],
-      //         ),
-      // ),
     );
   }
 }

@@ -105,4 +105,22 @@ class AuthDatasource {
       return left(Failure(e.toString()));
     }
   }
+
+  Future<Either<Failure, bool>> loginWithGoogle() async {
+    try {
+      await supabaseClient.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'larnity://login-callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+      // OAuth flow launched successfully
+      // The actual session will be handled by auth state listener
+      return right(true);
+    } on AuthException catch (e) {
+      return left(Failure(e.message));
+    } catch (e) {
+      Log.error("Google login failure: ${e.toString()}");
+      return left(Failure(e.toString()));
+    }
+  }
 }

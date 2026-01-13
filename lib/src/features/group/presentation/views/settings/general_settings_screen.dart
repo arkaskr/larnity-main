@@ -212,12 +212,24 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.primaryOrange,
                   borderRadius: BorderRadius.circular(AppSizes.xs),
+                  image: _getIconImage(groupState, currentGroup),
                 ),
+                child: _getIconImage(groupState, currentGroup) == null
+                    ? Center(
+                        child: Icon(
+                          Icons.image,
+                          size: 60,
+                          color: AppColors.white.withValues(alpha: 0.5),
+                        ),
+                      )
+                    : null,
               ),
               AppSizes.xs.ph,
               AppButton(
                 isExpanded: false,
-                onPressed: () {},
+                onPressed: () {
+                  groupNotifier.pickIcon();
+                },
                 bgColor: AppColors.darkBgContainer,
                 label: "Change Icon",
                 labelStyle: AppTextStyles.button(color: AppColors.white),
@@ -294,23 +306,46 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
                     showErrorToast(content: "No group selected");
                     return;
                   }
-                  if (groupState.selectedThumbnail == null) {
-                    showErrorToast(content: "Please select a thumbnail first");
-                    return;
+                  
+                  bool hasChanges = false;
+                  
+                  // Update thumbnail if selected
+                  if (groupState.selectedThumbnail != null) {
+                    hasChanges = true;
+                    await groupNotifier.fetchGroupById(currentGroup!.id!);
+                    await groupNotifier.updateGroupThumbnail(
+                      groupId: currentGroup!.id!,
+                      successCallBack: () {
+                        showSuccessToast(
+                          content: "Thumbnail updated successfully",
+                        );
+                      },
+                      failureCallBack: (error) {
+                        showErrorToast(content: error);
+                      },
+                    );
                   }
-                  await groupNotifier.fetchGroupById(currentGroup!.id!);
-
-                  groupNotifier.updateGroupThumbnail(
-                    groupId: currentGroup!.id!,
-                    successCallBack: () {
-                      showSuccessToast(
-                        content: "Thumbnail updated successfully",
-                      );
-                    },
-                    failureCallBack: (error) {
-                      showErrorToast(content: error);
-                    },
-                  );
+                  
+                  // Update icon if selected
+                  if (groupState.selectedIcon != null) {
+                    hasChanges = true;
+                    await groupNotifier.fetchGroupById(currentGroup!.id!);
+                    await groupNotifier.updateGroupIcon(
+                      groupId: currentGroup!.id!,
+                      successCallBack: () {
+                        showSuccessToast(
+                          content: "Icon updated successfully",
+                        );
+                      },
+                      failureCallBack: (error) {
+                        showErrorToast(content: error);
+                      },
+                    );
+                  }
+                  
+                  if (!hasChanges) {
+                    showErrorToast(content: "Please select a thumbnail or icon to update");
+                  }
                 },
                 bgColor: AppColors.primaryOrange,
                 label: AppStrings.saveChanges,
@@ -334,6 +369,22 @@ class _GeneralSettingsScreenState extends ConsumerState<GeneralSettingsScreen> {
     } else if (currentGroup?.thumbnail != null) {
       return DecorationImage(
         image: NetworkImage(currentGroup!.thumbnail!),
+        fit: BoxFit.cover,
+      );
+    }
+    return null;
+  }
+
+  DecorationImage? _getIconImage(groupState, currentGroup) {
+    // Priority: selectedIcon (local file) > existing icon URL
+    if (groupState.selectedIcon != null) {
+      return DecorationImage(
+        image: FileImage(File(groupState.selectedIcon!.path)),
+        fit: BoxFit.cover,
+      );
+    } else if (currentGroup?.icon != null) {
+      return DecorationImage(
+        image: NetworkImage(currentGroup!.icon!),
         fit: BoxFit.cover,
       );
     }

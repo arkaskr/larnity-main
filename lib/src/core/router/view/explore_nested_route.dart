@@ -47,6 +47,10 @@ class _ExploreNestedRouteState extends ConsumerState<ExploreNestedRoute> {
         }).toList() ??
         [];
     print("🔍 Total groups: ${userGroups.length}");
+    
+    // Calculate max overlay height (60% of screen height, but max 500)
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxOverlayHeight = (screenHeight * 0.6).clamp(200.0, 500.0);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -161,7 +165,7 @@ class _ExploreNestedRouteState extends ConsumerState<ExploreNestedRoute> {
                       ),
                     ],
                   ),
-                  overlayHeight: (userGroups.length * 70) + 120,
+                  overlayHeight: maxOverlayHeight,
                   overlayRadius: AppSizes.xs,
                   top: Padding(
                     padding: const EdgeInsets.all(AppSizes.sm),

@@ -312,18 +312,34 @@ class AuthNotifier extends Notifier<AuthState> {
   //   }
   // }
 
-  // Sign in with google
-  // Future<void> signInWithGoogle() async {
-  //   final supabaseClient = ref.read(supabaseClientProvider);
-  //   state = state.copyWith(state: AsyncState.loading);
-  //   try {
-  //     await supabaseClient.auth.signInWithOAuth(
-  //       OAuthProvider.google,
-  //       // redirectTo: 'my.scheme://my-host',
-  //       authScreenLaunchMode: LaunchMode.externalApplication,
-  //     );
-  //   } catch (e) {}
-  // }
+  Future<void> signInWithGoogle({
+    void Function()? successCallBack,
+    void Function()? failureCallBack,
+  }) async {
+    final datasource = ref.read(authDataSourceProvider);
+
+    state = state.copyWith(loginState: AsyncState.loading);
+
+    final response = await datasource.loginWithGoogle();
+
+    response.fold(
+      (failure) {
+        Log.error("Google login error: ${failure.message}");
+        state = state.copyWith(
+          loginState: AsyncState.failure,
+          error: failure.message,
+        );
+        failureCallBack?.call();
+      },
+      (success) {
+        // OAuth flow launched successfully
+        // The actual session will be handled by listenToAuthChanges()
+        // which will update the state when the user completes OAuth
+        state = state.copyWith(loginState: AsyncState.loading);
+        successCallBack?.call();
+      },
+    );
+  }
 
   // Listen to auth state changes
   void listenToAuthChanges() {

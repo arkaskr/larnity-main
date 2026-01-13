@@ -21,32 +21,53 @@ class DiscussionRoomScreen extends ConsumerStatefulWidget {
 
 class _DiscussionRoomScreenState extends ConsumerState<DiscussionRoomScreen> {
   String? _channelId;
+  String? _lastGroupId;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final groupState = ref.read(groupProvider);
-      final groupId = groupState.group?.id;
-      if (groupId != null) {
-        final channelId = await ref
-            .read(channelDataSourceProvider)
-            .getGeneralChannelId(groupId);
-        if (channelId != null && mounted) {
-          setState(() {
-            _channelId = channelId;
-          });
-          ref.read(postProvider).fetchPosts(channelId);
-        }
-      }
+      await _loadPostsForCurrentGroup();
     });
+  }
+
+  Future<void> _loadPostsForCurrentGroup() async {
+    final groupState = ref.read(groupProvider);
+    final groupId = groupState.group?.id;
+    
+    // Only reload if group has changed
+    if (groupId != null && groupId != _lastGroupId) {
+      _lastGroupId = groupId;
+      final channelId = await ref
+          .read(channelDataSourceProvider)
+          .getGeneralChannelId(groupId);
+      if (channelId != null && mounted) {
+        setState(() {
+          _channelId = channelId;
+        });
+        ref.read(postProvider).fetchPosts(channelId);
+      }
+    } else if (groupId == null && _channelId != null) {
+      // Clear if no group selected
+      setState(() {
+        _channelId = null;
+        _lastGroupId = null;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final groupState = ref.watch(groupProvider);
     final postState = ref.watch(postProvider);
-    final channelId = groupState.group?.id;
+    final currentGroupId = groupState.group?.id;
+
+    // Reload posts when group changes
+    if (currentGroupId != _lastGroupId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadPostsForCurrentGroup();
+      });
+    }
 
     if (_channelId == null) {
       return const Center(child: CircularProgressIndicator());

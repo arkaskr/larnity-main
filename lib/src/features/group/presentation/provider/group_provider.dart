@@ -174,6 +174,105 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
     }
   }
 
+  // Pick icon image
+  Future<void> pickIcon() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 90,
+      );
+
+      if (image != null) {
+        state = state.copyWith(selectedIcon: image);
+        Log.info("Icon selected: ${image.path}");
+      }
+    } catch (e) {
+      Log.error("Error picking icon: $e");
+      state = state.copyWith(error: "Failed to pick image");
+    }
+  }
+
+  // Upload icon to Supabase Storage and update group
+  Future<void> updateGroupIcon({
+    required String groupId,
+    void Function()? successCallBack,
+    void Function(String error)? failureCallBack,
+  }) async {
+    if (state.selectedIcon == null) {
+      failureCallBack?.call("No icon selected");
+      return;
+    }
+
+    if (state.group == null) {
+      failureCallBack?.call("No group selected");
+      return;
+    }
+
+    final dataSource = ref.read(groupDataSourceProvider);
+    final supabase = ref.read(supabaseClientProvider);
+
+    state = state.copyWith(updateState: AsyncState.loading);
+
+    try {
+      // Upload to Supabase Storage
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'icon_$timestamp.jpg';
+      final filePath = 'groups/$groupId/$fileName';
+
+      final file = File(state.selectedIcon!.path);
+      final bytes = await file.readAsBytes();
+
+      await supabase.storage
+          .from('images')
+          .uploadBinary(
+            filePath,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+
+      // Get public URL
+      final publicUrl = supabase.storage.from('images').getPublicUrl(filePath);
+      Log.info("Icon uploaded: $publicUrl");
+
+      // Update group with new icon URL
+      final updatedGroup = state.group!.copyWith(icon: publicUrl);
+      Log.info("🔍 Updated group icon: ${updatedGroup.icon}");
+
+      final response = await dataSource.updateGroup(group: updatedGroup);
+
+      response.fold(
+        (failure) {
+          state = state.copyWith(
+            updateState: AsyncState.failure,
+            error: failure.message,
+          );
+          failureCallBack?.call(failure.message);
+        },
+        (group) {
+          state = state.copyWith(
+            updateState: AsyncState.success,
+            group: group,
+            clearIcon: true,
+          );
+          successCallBack?.call();
+          Log.info("Group icon updated successfully");
+        },
+      );
+    } catch (e) {
+      Log.error("Error updating icon: $e");
+      state = state.copyWith(
+        updateState: AsyncState.failure,
+        error: e.toString(),
+      );
+      failureCallBack?.call(e.toString());
+    }
+  }
+
   // Join group
   Future<bool> joinGroup({required String groupId}) async {
     final dataSource = ref.read(groupDataSourceProvider);
@@ -211,7 +310,7 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
       groupId: groupId,
     );
 
-    return response.fold(
+    final result = response.fold(
       (failure) {
         state = state.copyWith(
           updateState: AsyncState.failure,
@@ -229,6 +328,14 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
         return true;
       },
     );
+
+    // ✅ Refresh groups list AFTER successful join so GroupNavBar shows updated list
+    // This must complete BEFORE navigation pop
+    if (result) {
+      await getExploreGroups(userId: userId);
+    }
+
+    return result;
   }
 
   Future<void> createGroup({
@@ -474,6 +581,7 @@ class GroupState {
   final Category? selectedCategory;
   final int selectedTabIndex;
   final XFile? selectedThumbnail;
+  final XFile? selectedIcon;
   final List<MemberModel>? groupMembers;
   final String? currentUserRole;
   final bool isCurrentUserMember; // ✅ NEW FIELD
@@ -489,6 +597,7 @@ class GroupState {
     this.selectedCategory,
     this.selectedTabIndex = 0,
     this.selectedThumbnail,
+    this.selectedIcon,
     this.groupMembers,
     this.currentUserRole,
     this.isCurrentUserMember = false, // ✅ DEFAULT TO FALSE
@@ -505,8 +614,10 @@ class GroupState {
     Category? selectedCategory,
     int? selectedTabIndex,
     XFile? selectedThumbnail,
+    XFile? selectedIcon,
     List<MemberModel>? groupMembers,
     bool clearThumbnail = false,
+    bool clearIcon = false,
     bool clearMembers = false,
     String? currentUserRole,
     bool? isCurrentUserMember, // ✅ NEW PARAMETER
@@ -524,6 +635,9 @@ class GroupState {
       selectedThumbnail: clearThumbnail
           ? null
           : (selectedThumbnail ?? this.selectedThumbnail),
+      selectedIcon: clearIcon
+          ? null
+          : (selectedIcon ?? this.selectedIcon),
       groupMembers: clearMembers ? null : (groupMembers ?? this.groupMembers),
       currentUserRole: currentUserRole ?? this.currentUserRole,
       isCurrentUserMember:

@@ -28,7 +28,62 @@ class GroupDataSource {
 
       Log.info("Create Group Response: ${response.toString()}");
 
-      return Right(GroupModel.fromMap(response));
+      final createdGroup = GroupModel.fromMap(response);
+
+      // Automatically add the creator as ADMIN to Members table
+      if (createdGroup.id != null && group.userId != null) {
+        try {
+          final groupId = createdGroup.id!;
+          final userId = group.userId!;
+          
+          // Check if member already exists (in case of retry or duplicate)
+          final existingMember = await supabaseClient
+              .from('Members')
+              .select()
+              .eq('userId', userId)
+              .eq('groupId', groupId)
+              .maybeSingle();
+
+          if (existingMember == null) {
+            await supabaseClient.from('Members').insert({
+              'userId': userId,
+              'groupId': groupId,
+              'role': 'ADMIN',
+              'isActive': true,
+              'planType': 'LIFETIME',
+              'subscriptionStartDate': DateTime.now().toIso8601String(),
+            });
+            Log.info("✅ Added group creator $userId as ADMIN to group $groupId");
+          } else {
+            // Ensure existing member is active and has ADMIN role
+            final isActive = existingMember['isActive'] as bool? ?? false;
+            final role = existingMember['role'] as String? ?? 'MEMBER';
+            
+            if (!isActive || role != 'ADMIN') {
+              await supabaseClient
+                  .from('Members')
+                  .update({
+                    'isActive': true,
+                    'role': 'ADMIN',
+                  })
+                  .eq('userId', userId)
+                  .eq('groupId', groupId);
+              Log.info("✅ Updated creator $userId to ADMIN and active in group $groupId");
+            } else {
+              Log.info("ℹ️ Creator $userId already exists as active ADMIN in group $groupId");
+            }
+          }
+        } on PostgrestException catch (e) {
+          // Log detailed error for debugging
+          Log.error("⚠️ Failed to add creator as member: ${e.message}");
+          Log.error("⚠️ Error code: ${e.code}, Details: ${e.details}");
+          // Don't fail group creation, but log the issue
+        } catch (e) {
+          Log.error("⚠️ Unexpected error adding creator as member: ${e.toString()}");
+        }
+      }
+
+      return Right(createdGroup);
     } on PostgrestException catch (e) {
       Log.error("Create Group Error: ${e.message}");
       return Left(Failure(e.message));

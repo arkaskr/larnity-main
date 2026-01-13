@@ -315,8 +315,19 @@ class AuthScreen extends ConsumerWidget {
                                 width: double.infinity,
                                 height: 50,
                                 child: AppButton(
+                                  isLoading: authState.loginState ==
+                                      AsyncState.loading,
                                   onPressed: () {
-                                    // Handle Google sign in
+                                    authNotifier.signInWithGoogle(
+                                      successCallBack: () {
+                                        // OAuth flow launched successfully
+                                        // Navigation will happen automatically
+                                        // when auth state changes via listenToAuthChanges()
+                                      },
+                                      failureCallBack: () {
+                                        // Error toast is shown via ref.listen in build method
+                                      },
+                                    );
                                   },
                                   borderColor: AppColors.white,
                                   radius: AppSizes.xs,
@@ -331,7 +342,7 @@ class AuthScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        'Google',
+                                        'Continue with Google',
                                         style: AppTextStyles.button(
                                           color: AppColors.white,
                                         ),
