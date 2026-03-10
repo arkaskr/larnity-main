@@ -11,11 +11,13 @@ class ManageGroupTabCard extends StatelessWidget {
     required this.onSwitch,
     required this.icon,
     required this.title,
+    this.value = true,
   });
 
   final void Function(bool) onSwitch;
   final List<List<dynamic>> icon;
   final String title;
+  final bool value;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,7 @@ class ManageGroupTabCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSizes.xxxs),
       ),
       child: SwitchListTile(
-        value: true,
+        value: value,
         onChanged: onSwitch,
         activeColor: AppColors.black,
         activeTrackColor: AppColors.white,
@@ -39,7 +41,13 @@ class ManageGroupTabCard extends StatelessWidget {
               child: HugeIcon(icon: icon, color: AppColors.primaryOrange),
             ),
             AppSizes.xs.pw,
-            Text(title, style: AppTextStyles.bodyText1()),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTextStyles.bodyText1(),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),

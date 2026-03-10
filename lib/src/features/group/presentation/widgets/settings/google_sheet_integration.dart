@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';
@@ -8,9 +9,53 @@ import 'package:larnity/src/core/extensions/extensions.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
+import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 
-class GoogleSheetIntegration extends StatelessWidget {
-  const GoogleSheetIntegration({Key? key}) : super(key: key);
+class GoogleSheetIntegration extends ConsumerStatefulWidget {
+  final String groupId;
+  
+  const GoogleSheetIntegration({Key? key, required this.groupId}) : super(key: key);
+
+  @override
+  ConsumerState<GoogleSheetIntegration> createState() => _GoogleSheetIntegrationState();
+}
+
+class _GoogleSheetIntegrationState extends ConsumerState<GoogleSheetIntegration> {
+  bool _enableSync = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load current settings
+    final group = ref.read(groupProvider).group;
+    if (group != null) {
+      _enableSync = group.enableGoogleSheetSync ?? false;
+    }
+  }
+
+  void _saveSettings() {
+    setState(() => _isLoading = true);
+
+    ref.read(groupProvider.notifier).updateGoogleSheetSettings(
+      groupId: widget.groupId,
+      googleSheetId: null, // Can be added later with a text field
+      enableSync: _enableSync,
+      successCallBack: () {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings saved successfully!')),
+        );
+        context.pop();
+      },
+      failureCallBack: (error) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $error')),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,8 +147,12 @@ class GoogleSheetIntegration extends StatelessWidget {
             ),
             child: CheckboxListTile(
               contentPadding: EdgeInsets.zero,
-              value: false,
-              onChanged: (val) {},
+              value: _enableSync,
+              onChanged: (val) {
+                setState(() {
+                  _enableSync = val ?? false;
+                });
+              },
               title: Text(AppStrings.enableGoogleSheetSync),
               subtitle: Text(AppStrings.enableGoogleSheetSyncDesc),
             ),
@@ -111,8 +160,8 @@ class GoogleSheetIntegration extends StatelessWidget {
           AppSizes.xs.ph,
 
           AppButton(
-            onPressed: () {},
-            label: AppStrings.saveSettings,
+            onPressed: _isLoading ? null : _saveSettings,
+            label: _isLoading ? 'Saving...' : AppStrings.saveSettings,
             labelStyle: AppTextStyles.bodyText2(color: AppColors.black),
             bgColor: AppColors.primaryOrange,
             radius: AppSizes.xxxs,

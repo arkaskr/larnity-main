@@ -9,54 +9,55 @@ class ChannelDataSource {
 
   Future<String?> getGeneralChannelId(String groupId) async {
     try {
-      // Try to fetch existing 'general' channel
+      // ✅ CRITICAL FIX: Use maybeSingle() + limit(1) to handle multiple channels
       final response = await supabase
           .from('Channel')
           .select('id')
           .eq('groupId', groupId)
           .eq('name', 'general')
-          .single();
-      return response['id'];
-    } catch (e) {
-      // Channel doesn't exist, create it
-      try {
-        final insertResponse = await supabase
-            .from('Channel')
-            .insert({
-              'groupId': groupId,
-              'name': 'general',
-              'created_at': DateTime.now().toIso8601String(),
-            })
-            .select('id')
-            .single();
-        
-        Log.info("✅ Created general channel for group $groupId");
-        return insertResponse['id'];
-      } on PostgrestException catch (e) {
-        // Handle unique constraint conflict - channel was created by another request
-        if (e.code == '23505' || e.message.contains('unique') || e.message.contains('duplicate')) {
-          Log.info("⚠️ Channel creation conflict, fetching existing channel");
-          // Retry fetch in case another request created it
-          try {
-            final retryResponse = await supabase
-                .from('Channel')
-                .select('id')
-                .eq('groupId', groupId)
-                .eq('name', 'general')
-                .single();
-            return retryResponse['id'];
-          } catch (retryError) {
-            Log.error("❌ Failed to fetch channel after conflict: $retryError");
-            return null;
-          }
-        } else {
-          Log.error("❌ Failed to create general channel: ${e.message}");
-          return null;
-        }
-      } catch (e) {
-        Log.error("❌ Unexpected error creating general channel: $e");
-        return null;
+          .limit(1) // ← ADDED: Only fetch first match
+          .maybeSingle(); // ← CHANGED: No exception if not found
+
+      // ✅ If channel exists, return it
+      if (response != null) {
+        Log.info(
+          "✅ Found existing general channel: ${response['id']} for group $groupId",
+        );
+        return response['id'];
       }
+
+      // ✅ Channel doesn't exist, create it ONCE
+      Log.info("📝 Creating general channel for group $groupId");
+      final insertResponse = await supabase
+          .from('Channel')
+          .insert({
+            'groupId': groupId,
+            'name': 'general',
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select('id')
+          .single();
+
+      Log.info("✅ Created general channel: ${insertResponse['id']}");
+      return insertResponse['id'];
+    } on PostgrestException catch (e) {
+      // ✅ Handle race condition (duplicate key)
+      if (e.code == '23505') {
+        Log.info("⚠️ Duplicate channel detected, fetching existing");
+        final retryResponse = await supabase
+            .from('Channel')
+            .select('id')
+            .eq('groupId', groupId)
+            .eq('name', 'general')
+            .limit(1) // ← ADDED: Safety limit
+            .maybeSingle();
+        return retryResponse?['id'];
+      }
+      Log.error("❌ Failed to get/create channel: ${e.message}");
+      return null;
+    } catch (e) {
+      Log.error("❌ Unexpected error in getGeneralChannelId: $e");
+      return null;
     }
   }
 }

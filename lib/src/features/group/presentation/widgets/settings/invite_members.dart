@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';
@@ -9,9 +10,60 @@ import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
 import 'package:larnity/src/core/ui/widgets/app_dropdown.dart';
+import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 
-class InviteMembers extends StatelessWidget {
-  const InviteMembers({Key? key}) : super(key: key);
+class InviteMembers extends ConsumerStatefulWidget {
+  final String groupId;
+  
+  const InviteMembers({Key? key, required this.groupId}) : super(key: key);
+
+  @override
+  ConsumerState<InviteMembers> createState() => _InviteMembersState();
+}
+
+class _InviteMembersState extends ConsumerState<InviteMembers> {
+  final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
+  String _selectedPlan = 'MONTHLY';
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _sendInvitation() {
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email address')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    ref.read(groupProvider.notifier).createInvitation(
+      groupId: widget.groupId,
+      email: _emailController.text.trim(),
+      name: _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
+      planType: _selectedPlan,
+      successCallBack: (link) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invitation sent successfully!')),
+        );
+        context.pop();
+      },
+      failureCallBack: (error) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $error')),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +232,7 @@ class InviteMembers extends StatelessWidget {
                   ),
                   AppSizes.xxxs.ph,
                   TextFormField(
+                    controller: _emailController,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: AppColors.darkBgContainer,
@@ -205,6 +258,7 @@ class InviteMembers extends StatelessWidget {
                   ),
                   AppSizes.xxxs.ph,
                   TextFormField(
+                    controller: _nameController,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: AppColors.darkBgContainer,
@@ -241,7 +295,7 @@ class InviteMembers extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            "Monthly Plan",
+                            _selectedPlan == 'MONTHLY' ? "Monthly Plan" : _selectedPlan == 'YEARLY' ? "Yearly Plan" : "Lifetime Plan",
                             style: AppTextStyles.bodyText2(
                               color: AppColors.white,
                             ),
@@ -254,17 +308,23 @@ class InviteMembers extends StatelessWidget {
                       ),
                     ),
                     items: [
-                      AppDropdownItem(value: "monthly", label: "Monthly Plan"),
-                      AppDropdownItem(value: "yearly", label: "Yearly Plan"),
+                      AppDropdownItem(value: "MONTHLY", label: "Monthly Plan"),
+                      AppDropdownItem(value: "YEARLY", label: "Yearly Plan"),
+                      AppDropdownItem(value: "LIFETIME", label: "Lifetime Plan"),
                     ],
+                    onItemSelected: (value) {
+                      setState(() {
+                        _selectedPlan = value;
+                      });
+                    },
                   ),
                 ],
               ),
             ),
             AppSizes.xs.ph,
             AppButton(
-              onPressed: () {},
-              label: AppStrings.sendInvitation,
+              onPressed: _isLoading ? null : _sendInvitation,
+              label: _isLoading ? 'Sending...' : AppStrings.sendInvitation,
               labelStyle: AppTextStyles.button(color: AppColors.black),
               bgColor: AppColors.primaryOrange,
             ),

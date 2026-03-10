@@ -11,6 +11,7 @@ import 'package:larnity/src/core/ui/widgets/app_button.dart';
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/presentation/provider/resource_provider.dart';
 import 'package:larnity/src/features/group/presentation/widgets/add_resource.dart';
+import 'package:larnity/src/features/group/presentation/widgets/resource_card.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class TreasureRoomScreen extends ConsumerStatefulWidget {
@@ -191,158 +192,15 @@ class _TreasureRoomScreenState extends ConsumerState<TreasureRoomScreen> {
                         ),
                       ),
                     )
-                  : GridView.builder(
+                  : ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: AppSizes.xs,
-                            mainAxisSpacing: AppSizes.xs,
-                            childAspectRatio: 0.85,
-                          ),
                       itemCount: resourceState.resources.length,
                       itemBuilder: (context, index) {
                         final resource = resourceState.resources[index];
-                        return GestureDetector(
-                          onTap: () => _launchUrl(resource.resourceLink),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.iconColor,
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.xxxs,
-                              ),
-                              border: Border.all(
-                                color: AppColors.skyBlue.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Image
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(AppSizes.xxxs),
-                                    topRight: Radius.circular(AppSizes.xxxs),
-                                  ),
-                                  child: Image.network(
-                                    resource.resourceImg,
-                                    height: 120,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        height: 120,
-                                        color: AppColors.darkBgContainer,
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.image_not_supported,
-                                            size: 48,
-                                            color: AppColors.skyBlue,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(AppSizes.xs),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          resource.resourceName,
-                                          style: AppTextStyles.headline4(
-                                            color: AppColors.white,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                'View Resource',
-                                                style: AppTextStyles.overLine(
-                                                  color: AppColors.skyBlue,
-                                                ),
-                                              ),
-                                            ),
-                                            IconButton(
-                                              padding: EdgeInsets.zero,
-                                              constraints:
-                                                  const BoxConstraints(),
-                                              onPressed: () async {
-                                                final confirm =
-                                                    await showDialog<bool>(
-                                                      context: context,
-                                                      builder: (context) =>
-                                                          AlertDialog(
-                                                            title: const Text(
-                                                              'Delete Resource',
-                                                            ),
-                                                            content: const Text(
-                                                              'Are you sure?',
-                                                            ),
-                                                            actions: [
-                                                              TextButton(
-                                                                onPressed: () =>
-                                                                    Navigator.pop(
-                                                                      context,
-                                                                      false,
-                                                                    ),
-                                                                child:
-                                                                    const Text(
-                                                                      'Cancel',
-                                                                    ),
-                                                              ),
-                                                              TextButton(
-                                                                onPressed: () =>
-                                                                    Navigator.pop(
-                                                                      context,
-                                                                      true,
-                                                                    ),
-                                                                child:
-                                                                    const Text(
-                                                                      'Delete',
-                                                                    ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                    );
-
-                                                if (confirm == true &&
-                                                    mounted) {
-                                                  await ref
-                                                      .read(resourceProvider)
-                                                      .deleteResource(
-                                                        resource.id!,
-                                                        currentGroupId,
-                                                      );
-                                                }
-                                              },
-                                              icon: HugeIcon(
-                                                icon: HugeIconsStrokeRounded
-                                                    .delete02,
-                                                //color: AppColors.error,
-                                                size: 20,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        return ResourceCard(
+                          resource: resource,
+                          groupId: currentGroupId,
                         );
                       },
                     ),

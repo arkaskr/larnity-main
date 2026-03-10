@@ -133,18 +133,13 @@ class _ClassRoomScreenState extends ConsumerState<ClassRoomScreen> {
                       ],
                     ),
                   )
-                : GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.75,
-                          crossAxisSpacing: AppSizes.xs,
-                          mainAxisSpacing: AppSizes.xs,
-                        ),
+                : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: AppSizes.md),
                     itemCount: courses.length,
                     itemBuilder: (context, index) {
                       final course = courses[index];
                       return Container(
+                        margin: const EdgeInsets.only(bottom: AppSizes.sm),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(AppSizes.xs),
                           color: AppColors.darkBgContainer,
@@ -161,12 +156,12 @@ class _ClassRoomScreenState extends ConsumerState<ClassRoomScreen> {
                               child: course.thumbnail != null
                                   ? Image.network(
                                       course.thumbnail!,
-                                      height: 120,
+                                      height: 200,
                                       width: double.infinity,
                                       fit: BoxFit.cover,
                                     )
                                   : Container(
-                                      height: 120,
+                                      height: 200,
                                       color: AppColors.skyBlue.withValues(
                                         alpha: 0.2,
                                       ),
@@ -180,57 +175,65 @@ class _ClassRoomScreenState extends ConsumerState<ClassRoomScreen> {
                             ),
 
                             Padding(
-                              padding: const EdgeInsets.all(AppSizes.xxs),
+                              padding: const EdgeInsets.all(AppSizes.sm),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Premium badge
-                                  if (course.isPaid)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: AppSizes.xxs,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primaryOrange,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        'Premium',
-                                        style: AppTextStyles.caption2(
-                                          color: AppColors.white,
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          course.name,
+                                          style: AppTextStyles.headline4(
+                                            color: AppColors.white,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                    ),
-
-                                  AppSizes.xxxs.ph,
-
-                                  // Course name
-                                  Text(
-                                    course.name,
-                                    style: AppTextStyles.bodyText2(
-                                      color: AppColors.white,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                      if (course.isPaid)
+                                        Container(
+                                          margin: const EdgeInsets.only(left: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSizes.xs,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primaryOrange,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Premium',
+                                            style: AppTextStyles.caption2(
+                                              color: AppColors.white,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
 
                                   if (course.description != null) ...[
-                                    AppSizes.xxxs.ph,
+                                    AppSizes.xs.ph,
                                     Text(
                                       course.description!,
-                                      style: AppTextStyles.caption2(
+                                      style: AppTextStyles.bodyText2(
                                         color: AppColors.white.withValues(
                                           alpha: 0.7,
                                         ),
                                       ),
-                                      maxLines: 2,
+                                      maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
 
                                   if (course.price != null) ...[
-                                    AppSizes.xxxs.ph,
+                                    AppSizes.xs.ph,
                                     Text(
                                       '₹${course.price}',
                                       style: AppTextStyles.headline3(

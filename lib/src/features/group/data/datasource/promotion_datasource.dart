@@ -20,7 +20,7 @@ class PromotionDataSource {
   }) async {
     try {
       final response = await supabaseClient
-          .from('promotions') // Adjust table name as needed
+          .from('PromoCode')
           .insert(promotion.toMap())
           .select()
           .single();
@@ -38,13 +38,13 @@ class PromotionDataSource {
   }
 
   Future<Either<Failure, PromotionModel>> getPromotion({
-    required String promoCodeld,
+    required String id,
   }) async {
     try {
       final response = await supabaseClient
-          .from('promotions')
+          .from('PromoCode')
           .select()
-          .eq('promoCodeld', promoCodeld)
+          .eq('id', id)
           .single();
 
       return Right(PromotionModel.fromMap(response));
@@ -58,16 +58,16 @@ class PromotionDataSource {
   }
 
   Future<Either<Failure, List<PromotionModel>>> getPromotionsByGroup({
-    required String groupld,
+    required String groupId,
   }) async {
     try {
       final response = await supabaseClient
-          .from('promotions')
+          .from('PromoCode')
           .select()
-          .eq('groupld', groupld)
+          .eq('groupId', groupId)
           .order('created_at', ascending: false);
 
-      final promotions = response
+      final promotions = (response as List)
           .map((data) => PromotionModel.fromMap(data))
           .toList();
 
@@ -82,20 +82,17 @@ class PromotionDataSource {
   }
 
   Future<Either<Failure, List<PromotionModel>>> getActivePromotionsByGroup({
-    required String groupld,
+    required String groupId,
   }) async {
     try {
-      final now = DateTime.now().toIso8601String();
       final response = await supabaseClient
-          .from('promotions')
+          .from('PromoCode')
           .select()
-          .eq('groupld', groupld)
+          .eq('groupId', groupId)
           .eq('isActive', true)
-          .lt('startAt', now)
-          .gt('endAt', now)
           .order('created_at', ascending: false);
 
-      final promotions = response
+      final promotions = (response as List)
           .map((data) => PromotionModel.fromMap(data))
           .toList();
 
@@ -111,16 +108,13 @@ class PromotionDataSource {
 
   Future<Either<Failure, List<PromotionModel>>> getAllActivePromotions() async {
     try {
-      final now = DateTime.now().toIso8601String();
       final response = await supabaseClient
-          .from('promotions')
+          .from('PromoCode')
           .select()
           .eq('isActive', true)
-          .lt('startAt', now)
-          .gt('endAt', now)
           .order('created_at', ascending: false);
 
-      final promotions = response
+      final promotions = (response as List)
           .map((data) => PromotionModel.fromMap(data))
           .toList();
 
@@ -134,41 +128,15 @@ class PromotionDataSource {
     }
   }
 
-  Future<Either<Failure, PromotionModel>> updatePromotion({
-    required PromotionModel promotion,
-  }) async {
-    try {
-      final response = await supabaseClient
-          .from('promotions')
-          .update(promotion.toMap())
-          .eq('promoCodeld', promotion.promoCodeld)
-          .select()
-          .single();
-
-      Log.info("Update Promotion Response: ${response.toString()}");
-
-      return Right(PromotionModel.fromMap(response));
-    } on PostgrestException catch (e) {
-      Log.error("Update Promotion Error: ${e.message}");
-      return Left(Failure(e.message));
-    } catch (e) {
-      Log.error("Update Promotion Error: ${e.toString()}");
-      return Left(Failure(e.toString()));
-    }
-  }
-
   Future<Either<Failure, PromotionModel>> updatePromotionStatus({
-    required String promoCodeld,
+    required String id,
     required bool isActive,
   }) async {
     try {
       final response = await supabaseClient
-          .from('promotions')
-          .update({
-            'isActive': isActive,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('promoCodeld', promoCodeld)
+          .from('PromoCode')
+          .update({'isActive': isActive})
+          .eq('id', id)
           .select()
           .single();
 
@@ -184,16 +152,11 @@ class PromotionDataSource {
     }
   }
 
-  Future<Either<Failure, void>> deletePromotion({
-    required String promoCodeld,
-  }) async {
+  Future<Either<Failure, void>> deletePromotion({required String id}) async {
     try {
-      await supabaseClient
-          .from('promotions')
-          .delete()
-          .eq('promoCodeld', promoCodeld);
+      await supabaseClient.from('PromoCode').delete().eq('id', id);
 
-      Log.info("Delete Promotion Success for Promo Code: $promoCodeld");
+      Log.info("Delete Promotion Success for ID: $id");
 
       return const Right(null);
     } on PostgrestException catch (e) {
@@ -201,54 +164,6 @@ class PromotionDataSource {
       return Left(Failure(e.message));
     } catch (e) {
       Log.error("Delete Promotion Error: ${e.toString()}");
-      return Left(Failure(e.toString()));
-    }
-  }
-
-  Future<Either<Failure, List<PromotionModel>>> getExpiredPromotions() async {
-    try {
-      final now = DateTime.now().toIso8601String();
-      final response = await supabaseClient
-          .from('promotions')
-          .select()
-          .lt('endAt', now)
-          .eq('isActive', true)
-          .order('endAt', ascending: false);
-
-      final promotions = response
-          .map((data) => PromotionModel.fromMap(data))
-          .toList();
-
-      return Right(promotions);
-    } on PostgrestException catch (e) {
-      Log.error("Get Expired Promotions Error: ${e.message}");
-      return Left(Failure(e.message));
-    } catch (e) {
-      Log.error("Get Expired Promotions Error: ${e.toString()}");
-      return Left(Failure(e.toString()));
-    }
-  }
-
-  Future<Either<Failure, List<PromotionModel>>> getUpcomingPromotions() async {
-    try {
-      final now = DateTime.now().toIso8601String();
-      final response = await supabaseClient
-          .from('promotions')
-          .select()
-          .gt('startAt', now)
-          .eq('isActive', true)
-          .order('startAt', ascending: true);
-
-      final promotions = response
-          .map((data) => PromotionModel.fromMap(data))
-          .toList();
-
-      return Right(promotions);
-    } on PostgrestException catch (e) {
-      Log.error("Get Upcoming Promotions Error: ${e.message}");
-      return Left(Failure(e.message));
-    } catch (e) {
-      Log.error("Get Upcoming Promotions Error: ${e.toString()}");
       return Left(Failure(e.toString()));
     }
   }

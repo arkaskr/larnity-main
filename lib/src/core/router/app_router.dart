@@ -10,7 +10,7 @@ class Routes {
   static const String groupDetails = 'group-details';
   static const String group = 'group';
   static const String generalSettings = 'general-settings';
-  static const String subscriptionSettings = 'subscription-settings';
+
   static const String paymentSettings = 'payment-settings';
   static const String offerSettings = 'offer-settings';
   static const String challengeSettings = 'challenge-settings';
@@ -22,6 +22,7 @@ class Routes {
   static const String profileSettings = 'profile-settings';
   static const String chatting = 'chatting';
   static const String choosePlan = 'choose-plan';
+  static const String subscriptionSettings = 'subscription-settings';
   static const String payment = 'payment';
 }
 
@@ -72,6 +73,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       _buildProfileSettingsScreenRoute(),
       _buildAuthScreenRoute(),
       _buildGroupScreenRoute(),
+
       // MOVED: All settings routes are now top-level routes
       _buildSubscriptionSettingsScreenRoute(),
       _buildPaymentSettingsScreenRoute(),
@@ -208,6 +210,14 @@ GoRoute _buildPackageScreenRoute() => GoRoute(
   ),
 );
 
+GoRoute _buildSubscriptionSettingsScreenRoute() => GoRoute(
+  name: Routes.subscriptionSettings,
+  path: Routes.subscriptionSettings.p,
+  pageBuilder: _getDefaultPageBuilderByPlatform(
+    childBuilder: (_, state) => SubscriptionSettingsScreen(),
+  ),
+);
+
 GoRoute _buildPackageDetailsScreenRoute() => GoRoute(
   name: Routes.packageDetails,
   path: Routes.packageDetails.p,
@@ -247,14 +257,6 @@ GoRoute _buildGeneralSettingsScreenRoute() => GoRoute(
   path: Routes.generalSettings.p,
   pageBuilder: _getDefaultPageBuilderByPlatform(
     childBuilder: (_, state) => GeneralSettingsScreen(),
-  ),
-);
-
-GoRoute _buildSubscriptionSettingsScreenRoute() => GoRoute(
-  name: Routes.subscriptionSettings,
-  path: Routes.subscriptionSettings.p,
-  pageBuilder: _getDefaultPageBuilderByPlatform(
-    childBuilder: (_, state) => SubscriptionSettingsScreen(),
   ),
 );
 

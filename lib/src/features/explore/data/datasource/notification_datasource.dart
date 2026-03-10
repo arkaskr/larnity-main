@@ -39,12 +39,37 @@ class NotificationDataSource {
     }
   }
 
+  /// Create notification using RPC to bypass RLS
+  Future<Either<Failure, NotificationModel>> createNotificationViaRPC({
+    required NotificationModel notification,
+  }) async {
+    try {
+      await supabaseClient.rpc(
+        'create_notification',
+        params: {
+          'notification_data': notification.toMap(),
+        },
+      );
+
+      Log.info("✅ Created notification via RPC: ${notification.id}");
+      return Right(notification);
+    } on PostgrestException catch (e) {
+      Log.error("❌ RPC Create Notification Error: ${e.message}");
+      return Left(Failure(e.message));
+    } catch (e) {
+      Log.error("❌ RPC Create Notification Error: ${e.toString()}");
+      return Left(Failure(e.toString()));
+    }
+  }
+
   Future<Either<Failure, List<NotificationModel>>> getNotificationsByUser({
     required String recipientId,
     int limit = 50,
     int offset = 0,
   }) async {
     try {
+      Log.info("🔍 Querying notifications for recipientId: $recipientId");
+      
       final response = await supabaseClient
           .from('Notifications')
           .select()
@@ -52,9 +77,13 @@ class NotificationDataSource {
           .order('created_at', ascending: false)
           .range(offset, offset + limit - 1);
 
+      Log.info("📦 Raw response: ${response.toString()}");
+
       final notifications = response
           .map((data) => NotificationModel.fromMap(data))
           .toList();
+
+      Log.info("✅ Parsed ${notifications.length} notifications");
 
       return Right(notifications);
     } on PostgrestException catch (e) {

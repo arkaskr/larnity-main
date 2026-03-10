@@ -218,7 +218,7 @@ class _ExploreGroupsWidgetState extends ConsumerState<ExploreGroupsWidget> {
       ),
       onPressed: () {
         if (category.name == 'All') {
-          notifier.state = notifier.state.copyWith(selectedCategory: null);
+          notifier.selectCategory(category: null);
         } else {
           notifier.selectCategory(category: category);
         }

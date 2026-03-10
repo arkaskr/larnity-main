@@ -109,9 +109,11 @@ class MemberModel extends Equatable {
       subscriptionEndDate: map['subscriptionEndDate'] != null
           ? DateTime.parse(map['subscriptionEndDate'])
           : null,
-      name: map['Users']?['name'] ?? 'Unknown',
-      email: map['Users']?['email'],
-      avatar: map['Users']?['avatar'],
+      name: map['profiles']?['firstname'] != null 
+          ? '${map['profiles']['firstname']} ${map['profiles']['lastname'] ?? ''}'.trim()
+          : map['Users']?['name'] ?? 'Unknown',
+      email: map['profiles']?['email'] ?? map['Users']?['email'],
+      avatar: map['profiles']?['image'] ?? map['Users']?['avatar'],
     );
   }
 

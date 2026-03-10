@@ -34,7 +34,7 @@ class SupabaseAuthService {
   Future<bool> signInWithGoogle() async {
     return await _supabaseClient.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'your-app-scheme://login-callback',
+      redirectTo: 'io.supabase.larnity://login-callback',
     );
   }
 

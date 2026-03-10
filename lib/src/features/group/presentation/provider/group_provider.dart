@@ -8,9 +8,13 @@ import 'package:larnity/src/features/auth/presentation/provider/auth_provider.da
 import 'package:larnity/src/features/explore/domain/category.dart';
 import 'package:larnity/src/features/group/data/datasource/group_datasource.dart';
 import 'package:larnity/src/features/group/data/models/group_model.dart';
+import 'package:larnity/src/features/group/data/models/paymintro_creds_model.dart';
+import 'package:larnity/src/core/ui/widgets/toast.dart';
 import 'package:larnity/src/core/service/supabase/src/supabase_provider.dart';
 import 'package:larnity/src/features/group/data/models/message_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
+import 'package:share_plus/share_plus.dart' as share_plus;
 
 final groupProvider = NotifierProvider.autoDispose<GroupNotifier, GroupState>(
   GroupNotifier.new,
@@ -554,8 +558,43 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
     }
   }
 
-  void selectCategory({required Category category}) {
-    state = state.copyWith(selectedCategory: category);
+  void selectCategory({Category? category}) {
+    if (category == null) {
+      state = state.copyWith(clearCategory: true);
+    } else {
+      state = state.copyWith(selectedCategory: category);
+    }
+  }
+  // group_provider.dart mein add karo (around line 200 ke baad)
+
+  Future<void> updateGroupPrices({
+    required GroupModel group,
+    void Function()? successCallBack,
+    void Function(String error)? failureCallBack,
+  }) async {
+    final dataSource = ref.read(groupDataSourceProvider);
+
+    state = state.copyWith(updateState: AsyncState.loading);
+
+    final response = await dataSource.updateGroup(group: group);
+
+    response.fold(
+      (failure) {
+        state = state.copyWith(
+          updateState: AsyncState.failure,
+          error: failure.message,
+        );
+        failureCallBack?.call(failure.message);
+      },
+      (updatedGroup) {
+        state = state.copyWith(
+          updateState: AsyncState.success,
+          group: updatedGroup,
+        );
+        successCallBack?.call();
+        Log.info("Group prices updated successfully");
+      },
+    );
   }
 
   void refreshGroupsForCurrentUser() {
@@ -568,7 +607,223 @@ class GroupNotifier extends AutoDisposeNotifier<GroupState> {
   void setSelectedTab(int index) {
     state = state.copyWith(selectedTabIndex: index);
   }
+
+  // Create invitation
+  Future<void> createInvitation({
+    required String groupId,
+    required String email,
+    String? name,
+    required String planType,
+    int expirationHours = 48,
+    bool sendEmail = true,
+    void Function(String link)? successCallBack,
+    void Function(String error)? failureCallBack,
+  }) async {
+    final dataSource = ref.read(groupDataSourceProvider);
+    state = state.copyWith(updateState: AsyncState.loading);
+
+    final response = await dataSource.createInvitation(
+      groupId: groupId,
+      email: email,
+      name: name,
+      planType: planType,
+      expirationHours: expirationHours,
+      sendEmail: sendEmail,
+    );
+
+    response.fold(
+      (failure) {
+        state = state.copyWith(
+          updateState: AsyncState.failure,
+          error: failure.message,
+        );
+        failureCallBack?.call(failure.message);
+      },
+      (link) {
+        state = state.copyWith(updateState: AsyncState.success);
+        successCallBack?.call(link);
+        Log.info("Invitation created successfully");
+      },
+    );
+  }
+
+  // Update Google Sheet settings
+  Future<void> updateGoogleSheetSettings({
+    required String groupId,
+    String? googleSheetId,
+    required bool enableSync,
+    void Function()? successCallBack,
+    void Function(String error)? failureCallBack,
+  }) async {
+    final dataSource = ref.read(groupDataSourceProvider);
+    state = state.copyWith(updateState: AsyncState.loading);
+
+    final response = await dataSource.updateGoogleSheetSettings(
+      groupId: groupId,
+      googleSheetId: googleSheetId,
+      enableSync: enableSync,
+    );
+
+    response.fold(
+      (failure) {
+        state = state.copyWith(
+          updateState: AsyncState.failure,
+          error: failure.message,
+        );
+        failureCallBack?.call(failure.message);
+      },
+      (updatedGroup) {
+        state = state.copyWith(
+          updateState: AsyncState.success,
+          group: updatedGroup,
+        );
+        successCallBack?.call();
+        Log.info("Google Sheet settings updated successfully");
+      },
+    );
+  }
+  Future<bool> savePaymintroCreds(PaymintroCredsModel creds) async {
+    state = state.copyWith(updateState: AsyncState.loading);
+    try {
+      final result = await ref.read(groupDataSourceProvider).savePaymintroCreds(creds);
+      return result.fold(
+        (l) {
+          Log.error("Failed to save Paymintro creds: ${l.message}");
+          AppToast.show("Failed to save credentials: ${l.message}",
+              isError: true);
+          return false;
+        },
+        (r) {
+          Log.info("Paymintro credentials saved successfully");
+          AppToast.show("Connected Paymintro successfully");
+          return true;
+        },
+      );
+    } catch (e) {
+      Log.error("Exception saving Paymintro creds: $e");
+      AppToast.show("Exception saving credentials: $e", isError: true);
+      return false;
+    } finally {
+      state = state.copyWith(updateState: AsyncState.initial);
+    }
+  }
+
+  // Export Group Members to CSV
+  Future<void> exportGroupMembers({
+    required String groupId,
+    void Function()? successCallBack,
+    void Function(String error)? failureCallBack,
+  }) async {
+    final dataSource = ref.read(groupDataSourceProvider);
+    state = state.copyWith(updateState: AsyncState.loading);
+
+    try {
+      // 1. Fetch Members
+      final response = await dataSource.getGroupMembers(groupId: groupId);
+
+      await response.fold(
+        (failure) async {
+          state = state.copyWith(
+            updateState: AsyncState.failure,
+            error: failure.message,
+          );
+          failureCallBack?.call(failure.message);
+        },
+        (members) async {
+          if (members.isEmpty) {
+            failureCallBack?.call("No members found to export");
+            state = state.copyWith(updateState: AsyncState.initial);
+            return;
+          }
+
+          // 2. Generate CSV String
+          final StringBuffer csvBuffer = StringBuffer();
+          
+          // Header
+          csvBuffer.writeln("User ID,Name,Email,Role,Plan,Join Date,Status");
+
+          for (final member in members) {
+            final userId = member.userId;
+            final name = member.name.replaceAll(',', ' '); // Escape commas
+            final email = member.email ?? 'N/A';
+            final role = member.role;
+            final plan = member.planType ?? 'N/A';
+            final joinDate = member.subscriptionStartDate != null 
+                ? member.subscriptionStartDate!.toIso8601String().split('T').first 
+                : 'N/A';
+            final status = member.isActive ? 'Active' : 'Inactive';
+
+            csvBuffer.writeln("$userId,$name,$email,$role,$plan,$joinDate,$status");
+          }
+
+          // 3. Save to Temp File
+          final directory = await path_provider.getTemporaryDirectory();
+          final file = File('${directory.path}/group_members_$groupId.csv');
+          await file.writeAsString(csvBuffer.toString());
+
+          // 4. Share File
+          await share_plus.Share.shareXFiles(
+            [share_plus.XFile(file.path)],
+            text: 'Group Members Export',
+          );
+
+          state = state.copyWith(updateState: AsyncState.success);
+          successCallBack?.call();
+          Log.info("✅ Exported ${members.length} members");
+        },
+      );
+    } catch (e) {
+      Log.error("❌ Export Error: $e");
+      state = state.copyWith(
+        updateState: AsyncState.failure,
+        error: e.toString(),
+      );
+      failureCallBack?.call(e.toString());
+    } finally {
+        state = state.copyWith(updateState: AsyncState.initial);
+    }
+  }
+
+  Future<void> updateGroupTabSettings({
+    required String groupId,
+    required Map<String, bool> tabSettings,
+    VoidCallback? successCallBack,
+    Function(String)? failureCallBack,
+  }) async {
+    try {
+      final currentGroup = state.group;
+      if (currentGroup == null) {
+        failureCallBack?.call("No group selected");
+        return;
+      }
+
+      final updatedGroup = currentGroup.copyWith(tabSettings: tabSettings);
+
+      // Optimistic update
+      state = state.copyWith(group: updatedGroup);
+
+      final result = await ref.read(groupDataSourceProvider).updateGroup(group: updatedGroup);
+
+      result.fold(
+        (failure) {
+          Log.error("Failed to update tab settings: ${failure.message}");
+          // Revert on failure
+          state = state.copyWith(group: currentGroup);
+          failureCallBack?.call(failure.message);
+        },
+        (updatedGroupFromDb) {
+          Log.info("Tab settings updated successfully");
+          state = state.copyWith(group: updatedGroupFromDb);
+          successCallBack?.call();
+        },
+      );
+    } catch (e) {
+      Log.error("Error updating tab settings: $e");
+      failureCallBack?.call(e.toString());
+    }
+  }
 }
+
 
 class GroupState {
   final AsyncState? fetchState;
@@ -619,6 +874,7 @@ class GroupState {
     bool clearThumbnail = false,
     bool clearIcon = false,
     bool clearMembers = false,
+    bool clearCategory = false, // ✅ NEW FLAG to clear selectedCategory
     String? currentUserRole,
     bool? isCurrentUserMember, // ✅ NEW PARAMETER
   }) {
@@ -630,14 +886,14 @@ class GroupState {
       groupName: groupName ?? this.groupName,
       group: group ?? this.group,
       groups: groups ?? this.groups,
-      selectedCategory: selectedCategory ?? this.selectedCategory,
+      selectedCategory: clearCategory
+          ? null
+          : (selectedCategory ?? this.selectedCategory),
       selectedTabIndex: selectedTabIndex ?? this.selectedTabIndex,
       selectedThumbnail: clearThumbnail
           ? null
           : (selectedThumbnail ?? this.selectedThumbnail),
-      selectedIcon: clearIcon
-          ? null
-          : (selectedIcon ?? this.selectedIcon),
+      selectedIcon: clearIcon ? null : (selectedIcon ?? this.selectedIcon),
       groupMembers: clearMembers ? null : (groupMembers ?? this.groupMembers),
       currentUserRole: currentUserRole ?? this.currentUserRole,
       isCurrentUserMember:

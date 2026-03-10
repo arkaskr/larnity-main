@@ -8,6 +8,7 @@ import 'package:larnity/src/core/extensions/extensions.dart';
 import 'package:larnity/src/core/theme/app_colors.dart';
 import 'package:larnity/src/core/theme/theme.dart';
 import 'package:larnity/src/core/ui/widgets/app_button.dart';
+import 'package:larnity/src/features/group/presentation/widgets/settings/connect_paymintro.dart';
 
 class PaymentSettingsScreen extends StatelessWidget {
   const PaymentSettingsScreen({Key? key}) : super(key: key);
@@ -62,7 +63,16 @@ class PaymentSettingsScreen extends StatelessWidget {
 
                   AppButton(
                     isExpanded: false,
-                    onPressed: () {},
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          contentPadding: EdgeInsets.zero,
+                          backgroundColor: Colors.transparent,
+                          content: ConnectPaymintro(),
+                        ),
+                      );
+                    },
                     prefix: HugeIcon(
                       icon: HugeIconsStrokeRounded.cloud,
                       color: AppColors.black,

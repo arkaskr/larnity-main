@@ -32,6 +32,7 @@ class GroupModel extends Equatable {
   final String? slug;
   final Map<String, dynamic>? landingSettings;
   final String? userRole;
+  final Map<String, bool>? tabSettings;
 
   const GroupModel({
     this.id,
@@ -61,6 +62,7 @@ class GroupModel extends Equatable {
     this.slug,
     this.landingSettings,
     this.userRole,
+    this.tabSettings,
   });
 
   GroupModel copyWith({
@@ -91,6 +93,7 @@ class GroupModel extends Equatable {
     String? slug,
     Map<String, dynamic>? landingSettings,
     String? userRole,
+    Map<String, bool>? tabSettings,
   }) {
     return GroupModel(
       id: id ?? this.id,
@@ -122,6 +125,7 @@ class GroupModel extends Equatable {
       slug: slug ?? this.slug,
       landingSettings: landingSettings ?? this.landingSettings,
       userRole: userRole ?? this.userRole,
+      tabSettings: tabSettings ?? this.tabSettings,
     );
   }
 
@@ -151,6 +155,7 @@ class GroupModel extends Equatable {
       'status': status?.name, // ✅ Uncomment karo
       'slug': slug,
       'landingSettings': landingSettings,
+      'tabSettings': tabSettings,
     }..removeWhere((key, value) => value == null);
   }
 
@@ -195,6 +200,9 @@ class GroupModel extends Equatable {
       landingSettings: map['landingSettings'] is String
           ? null // Agar string hai toh ignore karo
           : map['landingSettings'] as Map<String, dynamic>?,
+      tabSettings: map['tabSettings'] != null
+          ? Map<String, bool>.from(map['tabSettings'])
+          : null,
     );
   }
 
@@ -233,6 +241,7 @@ class GroupModel extends Equatable {
     slug,
     landingSettings,
     userRole,
+    tabSettings,
   ];
 
   @override

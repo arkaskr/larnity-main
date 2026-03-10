@@ -19,6 +19,7 @@ import 'package:larnity/src/core/ui/widgets/smart_image.dart';
 import 'package:larnity/src/features/auth/presentation/provider/auth_provider.dart';
 import 'package:larnity/src/features/group/presentation/provider/group_provider.dart';
 import 'package:larnity/src/features/group/data/models/group_model.dart';
+import 'package:larnity/src/features/explore/presentation/provider/notification_provider.dart';
 
 class GroupNavBar extends ConsumerStatefulWidget {
   GroupNavBar({Key? key, required this.navigationShell})
@@ -443,11 +444,19 @@ class _GroupNavBarState extends ConsumerState<GroupNavBar> {
             ),
             _BuildNavItem(
               onTap: () {},
-              icon: AppDropdown(
-                button: HugeIcon(
-                  icon: HugeIconsStrokeRounded.notification01,
-                  color: Colors.grey,
-                ),
+              icon: Consumer(
+                builder: (context, ref, child) {
+                  final notificationState = ref.watch(notificationProvider);
+                  final unreadCount = notificationState.unreadCount;
+                  
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      AppDropdown(
+                        button: HugeIcon(
+                          icon: HugeIconsStrokeRounded.notification01,
+                          color: Colors.grey,
+                        ),
                 gapFromButton: 16,
                 alignWithDevice: true,
                 overlayHeight: 260,
@@ -467,13 +476,17 @@ class _GroupNavBarState extends ConsumerState<GroupNavBar> {
                         ],
                       ),
                       AppSizes.xs.ph,
-                      RichText(
-                        text: TextSpan(
-                          text: AppStrings.markAllAsRead,
-                          style: AppTextStyles.subtitle2(
-                            color: AppColors.primaryOrange,
+                      GestureDetector(
+                        onTap: () {
+                          ref.read(notificationProvider.notifier).markAllAsRead();
+                        },
+                        child: RichText(
+                          text: TextSpan(
+                            text: AppStrings.markAllAsRead,
+                            style: AppTextStyles.subtitle2(
+                              color: AppColors.primaryOrange,
+                            ),
                           ),
-                          recognizer: TapGestureRecognizer()..onTap = () {},
                         ),
                       ),
                       AppSizes.xs.ph,
@@ -510,11 +523,41 @@ class _GroupNavBarState extends ConsumerState<GroupNavBar> {
                       onPressed: () {
                         context.pushNamed(Routes.notification);
                       },
-                      child: Text("See all notifications(0)"),
+                      child: Text("See all notifications($unreadCount)"),
                     ),
                   ],
                 ),
-                items: [],
+                        items: [],
+                      ),
+                      // Unread badge
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: -6,
+                          top: -6,
+                          child: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            child: Text(
+                              unreadCount > 99 ? '99+' : '$unreadCount',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               isSelected: widget.navigationShell.currentIndex == 1,
             ),

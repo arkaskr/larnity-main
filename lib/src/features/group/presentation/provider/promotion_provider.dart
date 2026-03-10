@@ -32,7 +32,10 @@ class PromotionNotifier extends Notifier<PromotionState> {
         failureCallBack?.call(failure.message);
       },
       (promotion) {
-        final updatedPromotions = [...state.promotions ?? [], promotion];
+        final List<PromotionModel> updatedPromotions = [
+          ...?state.promotions,
+          promotion,
+        ];
         state = state.copyWith(
           state: AsyncState.success,
           promotion: promotion,
@@ -43,49 +46,11 @@ class PromotionNotifier extends Notifier<PromotionState> {
     );
   }
 
-  Future<void> getPromotionsByGroup({required String groupld}) async {
+  Future<void> getPromotionsByGroup({required String groupId}) async {
     final dataSource = ref.read(promotionDataSourceProvider);
 
     state = state.copyWith(state: AsyncState.loading);
-    final response = await dataSource.getPromotionsByGroup(groupld: groupld);
-
-    response.fold(
-      (failure) => state = state.copyWith(
-        state: AsyncState.failure,
-        error: failure.message,
-      ),
-      (promotions) => state = state.copyWith(
-        state: AsyncState.success,
-        promotions: promotions,
-      ),
-    );
-  }
-
-  Future<void> getActivePromotionsByGroup({required String groupld}) async {
-    final dataSource = ref.read(promotionDataSourceProvider);
-
-    state = state.copyWith(state: AsyncState.loading);
-    final response = await dataSource.getActivePromotionsByGroup(
-      groupld: groupld,
-    );
-
-    response.fold(
-      (failure) => state = state.copyWith(
-        state: AsyncState.failure,
-        error: failure.message,
-      ),
-      (promotions) => state = state.copyWith(
-        state: AsyncState.success,
-        promotions: promotions,
-      ),
-    );
-  }
-
-  Future<void> getAllActivePromotions() async {
-    final dataSource = ref.read(promotionDataSourceProvider);
-
-    state = state.copyWith(state: AsyncState.loading);
-    final response = await dataSource.getAllActivePromotions();
+    final response = await dataSource.getPromotionsByGroup(groupId: groupId);
 
     response.fold(
       (failure) => state = state.copyWith(
@@ -100,14 +65,14 @@ class PromotionNotifier extends Notifier<PromotionState> {
   }
 
   Future<void> updatePromotionStatus({
-    required String promoCodeld,
+    required String id,
     required bool isActive,
   }) async {
     final dataSource = ref.read(promotionDataSourceProvider);
 
     state = state.copyWith(state: AsyncState.loading);
     final response = await dataSource.updatePromotionStatus(
-      promoCodeld: promoCodeld,
+      id: id,
       isActive: isActive,
     );
 
@@ -117,9 +82,8 @@ class PromotionNotifier extends Notifier<PromotionState> {
         error: failure.message,
       ),
       (promotion) {
-        // Update the promotion in the list
         final updatedPromotions = state.promotions?.map((p) {
-          return p.promoCodeld == promotion.promoCodeld ? promotion : p;
+          return p.id == promotion.id ? promotion : p;
         }).toList();
 
         state = state.copyWith(
@@ -131,38 +95,34 @@ class PromotionNotifier extends Notifier<PromotionState> {
     );
   }
 
-  Future<void> validatePromoCode({
-    required String promoCodeld,
-    required String groupld,
+  Future<void> deletePromotion({
+    required String id,
+    void Function()? successCallBack,
+    void Function(String error)? failureCallBack,
   }) async {
     final dataSource = ref.read(promotionDataSourceProvider);
 
     state = state.copyWith(state: AsyncState.loading);
-    final response = await dataSource.getPromotion(promoCodeld: promoCodeld);
+    final response = await dataSource.deletePromotion(id: id);
 
     response.fold(
-      (failure) => state = state.copyWith(
-        state: AsyncState.failure,
-        error: 'Invalid promo code',
-      ),
-      (promotion) {
-        if (promotion.groupld != groupld) {
-          state = state.copyWith(
-            state: AsyncState.failure,
-            error: 'Promo code not valid for this group',
-          );
-        } else if (!promotion.isCurrentlyActive) {
-          state = state.copyWith(
-            state: AsyncState.failure,
-            error: 'Promo code is not active',
-          );
-        } else {
-          state = state.copyWith(
-            state: AsyncState.success,
-            promotion: promotion,
-            error: null,
-          );
-        }
+      (failure) {
+        state = state.copyWith(
+          state: AsyncState.failure,
+          error: failure.message,
+        );
+        failureCallBack?.call(failure.message);
+      },
+      (_) {
+        final updatedPromotions = state.promotions?.where((p) {
+          return p.id != id;
+        }).toList();
+
+        state = state.copyWith(
+          state: AsyncState.success,
+          promotions: updatedPromotions,
+        );
+        successCallBack?.call();
       },
     );
   }
@@ -173,10 +133,6 @@ class PromotionNotifier extends Notifier<PromotionState> {
 
   void reset() {
     state = PromotionState(state: AsyncState.initial);
-  }
-
-  void clearSelectedPromotion() {
-    state = state.copyWith(promotion: null);
   }
 }
 
@@ -205,13 +161,4 @@ class PromotionState {
   bool get isLoading => state == AsyncState.loading;
   bool get isSuccess => state == AsyncState.success;
   bool get isFailure => state == AsyncState.failure;
-
-  List<PromotionModel> get activePromotions =>
-      promotions?.where((p) => p.isCurrentlyActive).toList() ?? [];
-
-  List<PromotionModel> get expiredPromotions =>
-      promotions?.where((p) => p.hasExpired).toList() ?? [];
-
-  List<PromotionModel> get upcomingPromotions =>
-      promotions?.where((p) => p.isScheduled).toList() ?? [];
 }

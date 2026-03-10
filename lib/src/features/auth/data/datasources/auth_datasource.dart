@@ -110,7 +110,7 @@ class AuthDatasource {
     try {
       await supabaseClient.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'larnity://login-callback',
+        redirectTo: 'io.supabase.larnity://login-callback',
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
       // OAuth flow launched successfully

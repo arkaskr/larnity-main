@@ -316,141 +316,142 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
                   AppSizes.xs.ph,
 
                   // Settings Expansion Tile
-                  Theme(
-                    data: Theme.of(
-                      context,
-                    ).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      title: Text(
-                        "Settings",
-                        style: AppTextStyles.button(),
+                  if (currentGroup.userId == ref.watch(authProvider).user?.id)
+                    Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        title: Text(
+                          "Settings",
+                          style: AppTextStyles.button(),
+                        ),
+                        tilePadding: EdgeInsets.zero,
+                        leading: HugeIcon(
+                          icon: HugeIconsStrokeRounded.settings01,
+                          color: Colors.grey,
+                        ),
+                        children: [
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              if (currentGroup != null) {
+                                ref
+                                    .read(groupProvider.notifier)
+                                    .setSelectedGroup(currentGroup);
+                              }
+                              context.pushNamed(Routes.generalSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.settings01,
+                              color: Colors.grey,
+                            ),
+                            title: Text("General"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(Routes.subscriptionSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.wallet01,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Subscriptions"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(Routes.paymentSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.building01,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Payment Method"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(Routes.offerSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.package,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Offer"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(Routes.challengeSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.award02,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Challenge"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(Routes.integrationSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.link01,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Integration"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(Routes.promoCodeSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.ticket03,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Promo Code"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(
+                                Routes.memberManagementSettings,
+                              );
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.man,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Member Management"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(Routes.leaveReasonsSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.userBlock02,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Leave Reason"),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              context.pushNamed(Routes.managerSettings);
+                            },
+                            leading: HugeIcon(
+                              icon: HugeIconsStrokeRounded.userShield02,
+                              color: Colors.grey,
+                            ),
+                            title: Text("Manager"),
+                          ),
+                        ],
                       ),
-                      tilePadding: EdgeInsets.zero,
-                      leading: HugeIcon(
-                        icon: HugeIconsStrokeRounded.settings01,
-                        color: Colors.grey,
-                      ),
-                      children: [
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            if (currentGroup != null) {
-                              ref
-                                  .read(groupProvider.notifier)
-                                  .setSelectedGroup(currentGroup);
-                            }
-                            context.pushNamed(Routes.generalSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.settings01,
-                            color: Colors.grey,
-                          ),
-                          title: Text("General"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(Routes.subscriptionSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.wallet01,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Subscriptions"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(Routes.paymentSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.building01,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Payment Method"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(Routes.offerSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.package,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Offer"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(Routes.challengeSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.award02,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Challenge"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(Routes.integrationSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.link01,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Integration"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(Routes.promoCodeSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.ticket03,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Promo Code"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(
-                              Routes.memberManagementSettings,
-                            );
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.man,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Member Management"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(Routes.leaveReasonsSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.userBlock02,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Leave Reason"),
-                        ),
-                        ListTile(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context.pushNamed(Routes.managerSettings);
-                          },
-                          leading: HugeIcon(
-                            icon: HugeIconsStrokeRounded.userShield02,
-                            color: Colors.grey,
-                          ),
-                          title: Text("Manager"),
-                        ),
-                      ],
                     ),
-                  ),
                 ],
               ),
             ),
@@ -552,50 +553,61 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
                   color: AppColors.white,
                 ),
                 buttonItems: [
-                  AppSegmentedButtonItem(
-                    label: "Discussion Room",
-                    prefixIcon: HugeIconsStrokeRounded.home03,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Class Room",
-                    prefixIcon: HugeIconsStrokeRounded.geometricShapes01,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Live Class Room",
-                    prefixIcon: HugeIconsStrokeRounded.computerVideo,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Events Room",
-                    prefixIcon: HugeIconsStrokeRounded.calendar03,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Members Room",
-                    prefixIcon: HugeIconsStrokeRounded.userMultiple,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Doubt Room",
-                    prefixIcon: HugeIconsStrokeRounded.sourceCodeSquare,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Challenges Room",
-                    prefixIcon: HugeIconsStrokeRounded.adventure,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Treasure Room",
-                    prefixIcon: HugeIconsStrokeRounded.notebook02,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Product Room",
-                    prefixIcon: HugeIconsStrokeRounded.shoppingBag01,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Service Room",
-                    prefixIcon: HugeIconsStrokeRounded.documentValidation,
-                  ),
-                  AppSegmentedButtonItem(
-                    label: "Job Room",
-                    prefixIcon: HugeIconsStrokeRounded.id,
-                  ),
+                  if (currentGroup.tabSettings?['discussion'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Discussion Room",
+                      prefixIcon: HugeIconsStrokeRounded.home03,
+                    ),
+                  if (currentGroup.tabSettings?['class'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Class Room",
+                      prefixIcon: HugeIconsStrokeRounded.geometricShapes01,
+                    ),
+                  if (currentGroup.tabSettings?['live_class'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Live Class Room",
+                      prefixIcon: HugeIconsStrokeRounded.computerVideo,
+                    ),
+                  if (currentGroup.tabSettings?['events'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Events Room",
+                      prefixIcon: HugeIconsStrokeRounded.calendar03,
+                    ),
+                  if (currentGroup.tabSettings?['members'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Members Room",
+                      prefixIcon: HugeIconsStrokeRounded.userMultiple,
+                    ),
+                  if (currentGroup.tabSettings?['doubt'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Doubt Room",
+                      prefixIcon: HugeIconsStrokeRounded.sourceCodeSquare,
+                    ),
+                  if (currentGroup.tabSettings?['challenges'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Challenges Room",
+                      prefixIcon: HugeIconsStrokeRounded.adventure,
+                    ),
+                  if (currentGroup.tabSettings?['treasure'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Treasure Room",
+                      prefixIcon: HugeIconsStrokeRounded.notebook02,
+                    ),
+                  if (currentGroup.tabSettings?['product'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Product Room",
+                      prefixIcon: HugeIconsStrokeRounded.shoppingBag01,
+                    ),
+                  if (currentGroup.tabSettings?['service'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Service Room",
+                      prefixIcon: HugeIconsStrokeRounded.documentValidation,
+                    ),
+                  if (currentGroup.tabSettings?['job'] ?? true)
+                    AppSegmentedButtonItem(
+                      label: "Job Room",
+                      prefixIcon: HugeIconsStrokeRounded.id,
+                    ),
                 ],
                 pageController: groupPageController,
               ),
@@ -606,17 +618,28 @@ class _GroupHomeScreenState extends ConsumerState<GroupHomeScreen> {
                     ref.read(groupProvider.notifier).setSelectedTab(index);
                   },
                   children: [
-                    DiscussionRoomScreen(),
-                    ClassRoomScreen(),
-                    LiveClassRoomScreen(groupId: currentGroup.id!),
-                    EventRoomScreen(),
-                    MembersRoomScreen(),
-                    DoubtRoomScreen(),
-                    ChallengeRoomScreen(),
-                    TreasureRoomScreen(),
-                    ProductRoomScreen(),
-                    ServiceRoomScreen(),
-                    JobRoomScreen(),
+                    if (currentGroup.tabSettings?['discussion'] ?? true)
+                      DiscussionRoomScreen(),
+                    if (currentGroup.tabSettings?['class'] ?? true)
+                      ClassRoomScreen(),
+                    if (currentGroup.tabSettings?['live_class'] ?? true)
+                      LiveClassRoomScreen(groupId: currentGroup.id!),
+                    if (currentGroup.tabSettings?['events'] ?? true)
+                      EventRoomScreen(),
+                    if (currentGroup.tabSettings?['members'] ?? true)
+                      MembersRoomScreen(),
+                    if (currentGroup.tabSettings?['doubt'] ?? true)
+                      DoubtRoomScreen(),
+                    if (currentGroup.tabSettings?['challenges'] ?? true)
+                      ChallengeRoomScreen(),
+                    if (currentGroup.tabSettings?['treasure'] ?? true)
+                      TreasureRoomScreen(),
+                    if (currentGroup.tabSettings?['product'] ?? true)
+                      ProductRoomScreen(),
+                    if (currentGroup.tabSettings?['service'] ?? true)
+                      ServiceRoomScreen(),
+                    if (currentGroup.tabSettings?['job'] ?? true)
+                      JobRoomScreen(),
                   ],
                 ),
               ),

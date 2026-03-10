@@ -1,119 +1,89 @@
 import 'package:equatable/equatable.dart';
 
 class PromotionModel extends Equatable {
+  final String id;
   final DateTime createdAt;
-  final DateTime? updatedAt;
-  final String title;
-  final DateTime startAt;
-  final DateTime endAt;
-  final String promoCodeld;
-  final String groupld;
-  final bool isShowRemainingUses;
+  final String code;
+  final int discountRate;
+  final String planType;
+  final int maxUses;
+  final int currentUses;
   final bool isActive;
+  final String groupId;
 
   const PromotionModel({
+    required this.id,
     required this.createdAt,
-    this.updatedAt,
-    required this.title,
-    required this.startAt,
-    required this.endAt,
-    required this.promoCodeld,
-    required this.groupld,
-    required this.isShowRemainingUses,
+    required this.code,
+    required this.discountRate,
+    required this.planType,
+    required this.maxUses,
+    required this.currentUses,
     required this.isActive,
+    required this.groupId,
   });
 
   PromotionModel copyWith({
+    String? id,
     DateTime? createdAt,
-    DateTime? updatedAt,
-    String? title,
-    DateTime? startAt,
-    DateTime? endAt,
-    String? promoCodeld,
-    String? groupld,
-    bool? isShowRemainingUses,
+    String? code,
+    int? discountRate,
+    String? planType,
+    int? maxUses,
+    int? currentUses,
     bool? isActive,
+    String? groupId,
   }) {
     return PromotionModel(
+      id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      title: title ?? this.title,
-      startAt: startAt ?? this.startAt,
-      endAt: endAt ?? this.endAt,
-      promoCodeld: promoCodeld ?? this.promoCodeld,
-      groupld: groupld ?? this.groupld,
-      isShowRemainingUses: isShowRemainingUses ?? this.isShowRemainingUses,
+      code: code ?? this.code,
+      discountRate: discountRate ?? this.discountRate,
+      planType: planType ?? this.planType,
+      maxUses: maxUses ?? this.maxUses,
+      currentUses: currentUses ?? this.currentUses,
       isActive: isActive ?? this.isActive,
+      groupId: groupId ?? this.groupId,
     );
   }
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
-      'title': title,
-      'startAt': startAt.toIso8601String(),
-      'endAt': endAt.toIso8601String(),
-      'promoCodeld': promoCodeld,
-      'groupld': groupld,
-      'isShowRemainingUses': isShowRemainingUses,
+      'code': code,
+      'discountRate': discountRate,
+      'planType': planType,
+      'maxUses': maxUses,
+      'currentUses': currentUses,
       'isActive': isActive,
-    }..removeWhere((key, value) => value == null);
+      'groupId': groupId,
+    };
   }
 
   factory PromotionModel.fromMap(Map<String, dynamic> map) {
     return PromotionModel(
+      id: map['id'] as String,
       createdAt: DateTime.parse(map['created_at'] as String),
-      updatedAt: map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'] as String)
-          : null,
-      title: map['title'] as String,
-      startAt: DateTime.parse(map['startAt'] as String),
-      endAt: DateTime.parse(map['endAt'] as String),
-      promoCodeld: map['promoCodeld'] as String,
-      groupld: map['groupld'] as String,
-      isShowRemainingUses: map['isShowRemainingUses'] as bool,
+      code: map['code'] as String,
+      discountRate: map['discountRate'] as int,
+      planType: map['planType'] as String,
+      maxUses: map['maxUses'] as int,
+      currentUses: map['currentUses'] as int,
       isActive: map['isActive'] as bool,
+      groupId: map['groupId'] as String,
     );
-  }
-
-  bool get isCurrentlyActive {
-    final now = DateTime.now();
-    return isActive && now.isAfter(startAt) && now.isBefore(endAt);
-  }
-
-  bool get hasExpired => DateTime.now().isAfter(endAt);
-
-  bool get isScheduled => DateTime.now().isBefore(startAt);
-
-  Duration get remainingDuration {
-    final now = DateTime.now();
-    if (now.isBefore(startAt)) {
-      return startAt.difference(now);
-    } else if (now.isBefore(endAt)) {
-      return endAt.difference(now);
-    }
-    return Duration.zero;
-  }
-
-  String get status {
-    if (!isActive) return 'Inactive';
-    if (hasExpired) return 'Expired';
-    if (isScheduled) return 'Scheduled';
-    return 'Active';
   }
 
   @override
   List<Object?> get props => [
+    id,
     createdAt,
-    updatedAt,
-    title,
-    startAt,
-    endAt,
-    promoCodeld,
-    groupld,
-    isShowRemainingUses,
+    code,
+    discountRate,
+    planType,
+    maxUses,
+    currentUses,
     isActive,
+    groupId,
   ];
 
   @override
